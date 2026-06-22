@@ -6,10 +6,11 @@ deal with simple, typed return values.
 
 from __future__ import annotations
 
-from ._explorer import get_case_by_uuid
-
 from fmu.sumo.explorer.objects import Table
 
+from ri_cloud_services.service_exceptions import InvalidDataError, NoDataError, Service, ServiceRequestError
+
+from ._explorer import get_case_by_uuid
 
 class ParameterAccess:
     """Access parameter data for a given Sumo case + ensemble."""
@@ -38,20 +39,21 @@ class ParameterAccess:
 
         realization_count = await sc_parameters_per_real.length_async()
         if realization_count == 0:
-            raise LookupError(
-                f"No parameters found for case {self._case_uuid} and ensemble {self._ensemble_name}"
+            raise NoDataError(
+                f"No parameters found for case {self._case_uuid} and ensemble {self._ensemble_name}",
+                Service.SUMO
             )
 
         sc_param_table = sc_ensemble.parameters
         try:
             parameter_agg = await sc_param_table.aggregation_async(operation="collection")
         except Exception as exp:
-            raise LookupError(
-                f"Parameter aggregation failed for case {self._case_uuid} and ensemble {self._ensemble_name}"
+            raise ServiceRequestError(
+                f"Parameter aggregation failed for case {self._case_uuid} and ensemble {self._ensemble_name}", Service.SUMO
             ) from exp
         
         if not isinstance(parameter_agg, Table):
-            raise LookupError("Did not get expected object type of Table for parameter aggregation")
+            raise InvalidDataError("Did not get expected object type of Table for parameter aggregation", Service.SUMO)
         
 
         blob_url = parameter_agg.metadata["_sumo"]["blob_url"]

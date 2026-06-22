@@ -6,7 +6,10 @@ deal with simple, typed return values.
 
 from __future__ import annotations
 
+from ri_cloud_services.service_exceptions import MultipleDataMatchesError, NoDataError, Service
+
 from ._explorer import get_case_by_uuid
+
 
 # Non-vector columns that may appear in a summary table and should be filtered
 # out when listing available vectors.
@@ -39,19 +42,22 @@ class SummaryAccess:
         # )  
 
         if await table_context.length_async() == 0:
-            raise LookupError(
+            raise NoDataError(
                 f"No summary tables found for ensemble '{self._ensemble_name}' "
-                f"in case '{self._case_uuid}'"
+                f"in case '{self._case_uuid}'",
+                Service.SUMO
             )
         
         table_names = await table_context.names_async
         if len(table_names) == 0:
-            raise LookupError(
-                f"No summary tables found in case={self._case_uuid}, ensemble={self._ensemble_name}"
+            raise NoDataError(
+                f"No summary tables found in case={self._case_uuid}, ensemble={self._ensemble_name}",
+                Service.SUMO
             )
         if len(table_names) > 1:
-            raise LookupError(
-                f"Multiple summary tables found in case={self._case_uuid}, ensemble={self._ensemble_name}: {table_names=}"
+            raise MultipleDataMatchesError(
+                f"Multiple summary tables found in case={self._case_uuid}, ensemble={self._ensemble_name}: {table_names=}",
+                Service.SUMO
             )
         
         column_names = await table_context.columns_async
@@ -81,12 +87,14 @@ class SummaryAccess:
         )
 
         if len(sc_per_real_tables.names) == 0:
-            raise LookupError(
-                f"No tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}'"
+            raise NoDataError(
+                f"No tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}'",
+                Service.SUMO
             )
         if len(sc_per_real_tables.names) > 1:
-            raise LookupError(
-                f"Multiple tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}': {sc_per_real_tables.names}"
+            raise MultipleDataMatchesError(
+                f"Multiple tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}': {sc_per_real_tables.names}",
+                Service.SUMO
             )
 
         # Trigger aggregation if not existing

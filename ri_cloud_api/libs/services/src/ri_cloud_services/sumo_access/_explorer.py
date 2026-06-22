@@ -13,6 +13,7 @@ from functools import lru_cache
 
 from fmu.sumo.explorer import Explorer
 from fmu.sumo.explorer.objects import Case
+from ri_cloud_services.service_exceptions import NoDataError, Service
 
 logger = logging.getLogger("ri_cloud_api.sumo_access")
 
@@ -29,10 +30,10 @@ def get_explorer() -> Explorer:
 def get_case_by_uuid(case_uuid: str) -> Case:
     """Look up a Sumo case by uuid.
 
-    Raises LookupError if the case cannot be found; routers translate this
+    Raises NoDataError if the case cannot be found; routers translate this
     into an HTTP 404.
     """
     try:
         return get_explorer().get_case_by_uuid(case_uuid)
     except Exception as exc:  # fmu-sumo raises a variety of error types
-        raise LookupError(f"Case '{case_uuid}' not found: {exc}") from exc
+        raise NoDataError(f"Case '{case_uuid}' not found: {exc}", Service.SUMO) from exc

@@ -19,6 +19,7 @@ import logging
 
 from fastapi import FastAPI
 
+from .utils.exception_handlers import add_exception_handlers
 from .routers.explore.router import router as explore_router
 from .routers.polygons.router import router as polygons_router
 from .routers.surfaces.router import router as surfaces_router
@@ -30,6 +31,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 app = FastAPI(title="ResInsight Cloud API")
+
+add_exception_handlers(app)
 
 app.include_router(explore_router)
 app.include_router(timeseries_router)

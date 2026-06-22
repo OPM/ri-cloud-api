@@ -1,14 +1,20 @@
 from __future__ import annotations
+
 import asyncio
 from typing import Optional
+from fmu.sumo.explorer.objects import CPGrid
+from fmu.sumo.explorer import TimeFilter, TimeType
 
 from ri_cloud_core_utils.timestamp_utils import iso_str_to_date_str
+from ri_cloud_services.service_exceptions import (
+    InvalidDataError, 
+    InvalidParameterError, 
+    MultipleDataMatchesError, 
+    NoDataError, 
+    Service)
 
 from ._explorer import get_case_by_uuid
 from .grid_types import GridInfo, GridPropertyInfo
-
-from fmu.sumo.explorer.objects import CPGrid
-from fmu.sumo.explorer import TimeFilter, TimeType
 
 def get_time_filter(time_or_interval_str: Optional[str]) -> TimeFilter:
     """Convert a time_or_interval_str to a TimeFilter."""
@@ -18,7 +24,7 @@ def get_time_filter(time_or_interval_str: Optional[str]) -> TimeFilter:
     else:
         timestamp_arr = time_or_interval_str.split("/", 1)
         if len(timestamp_arr) == 0 or len(timestamp_arr) > 2:
-            raise ValueError("time_or_interval_str must contain a single timestamp or interval")
+            raise InvalidParameterError("time_or_interval_str must contain a single timestamp or interval", Service.SUMO)
         if len(timestamp_arr) == 1:
             time_filter = TimeFilter(
                 TimeType.TIMESTAMP,
@@ -53,9 +59,10 @@ class GridAccess:
 
         grid_context = case.grids.grids.filter(ensemble=self._ensemble_name)
         if await grid_context.length_async() == 0:
-            raise LookupError(
+            raise NoDataError(
                 f"No grid tables found for ensemble '{self._ensemble_name}' "
-                f"in case '{self._case_uuid}'"
+                f"in case '{self._case_uuid}'",
+                Service.SUMO
             )
 
         grid_names = await grid_context.names_async
@@ -80,19 +87,22 @@ class GridAccess:
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
         if await grid_context.length_async() == 0:
-            raise LookupError(
+            raise NoDataError(
                 f"No grid table named '{grid_name}' found for ensemble '{self._ensemble_name}' "
-                f"in case '{self._case_uuid}', and realization {realization}"
+                f"in case '{self._case_uuid}', and realization {realization}",
+                Service.SUMO
             )
         
         table_names = await grid_context.names_async
         if len(table_names) == 0:
-            raise LookupError(
-                f"No grid tables found in case={self._case_uuid}, ensemble={self._ensemble_name}"
+            raise NoDataError(
+                f"No grid tables found in case={self._case_uuid}, ensemble={self._ensemble_name}",
+                Service.SUMO
             )
         if len(table_names) > 1:
-            raise LookupError(
-                f"Multiple grid tables found in case={self._case_uuid}, ensemble={self._ensemble_name}: {table_names=}"
+            raise MultipleDataMatchesError(
+                f"Multiple grid tables found in case={self._case_uuid}, ensemble={self._ensemble_name}: {table_names=}",
+                Service.SUMO
             )
         
         grid_table = await grid_context.getitem_async(0)
@@ -105,18 +115,19 @@ class GridAccess:
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
         if await grid_context.length_async() == 0:
-            raise LookupError(
+            raise NoDataError(
                 f"No grid table named '{grid_name}' found for ensemble '{self._ensemble_name}' "
-                f"in case '{self._case_uuid}', and realization {realization}"
+                f"in case '{self._case_uuid}', and realization {realization}",
+                Service.SUMO
             )
         
         # Expect unique grid:
         if len(grid_context) != 1:
-            raise ValueError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}")
+            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}", Service.SUMO)
         
         sumo_grid_object = grid_context[0]
         if not isinstance(sumo_grid_object, CPGrid):
-            raise TypeError(f"Expected CPGrid, got {type(sumo_grid_object)}")
+            raise InvalidDataError(f"Expected CPGrid, got {type(sumo_grid_object)}", Service.SUMO)
         
         no_time_context = sumo_grid_object.grid_properties.filter(time=TimeFilter(time_type=TimeType.NONE))
         timestamp_context = sumo_grid_object.grid_properties.filter(time=TimeFilter(time_type=TimeType.TIMESTAMP))
@@ -171,31 +182,34 @@ class GridAccess:
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
         if await grid_context.length_async() == 0:
-            raise LookupError(
+            raise NoDataError(
                 f"No grid table named '{grid_name}' found for ensemble '{self._ensemble_name}' "
-                f"in case '{self._case_uuid}', and realization {realization}"
+                f"in case '{self._case_uuid}', and realization {realization}",
+                Service.SUMO
             )
         
         # Expect unique grid:
         if len(grid_context) != 1:
-            raise ValueError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}")
+            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}", Service.SUMO)
         
         sumo_grid_object = grid_context[0]
         if not isinstance(sumo_grid_object, CPGrid):
-            raise TypeError(f"Expected CPGrid, got {type(sumo_grid_object)}")
+            raise InvalidDataError(f"Expected CPGrid, got {type(sumo_grid_object)}", Service.SUMO)
         
         time_filter = get_time_filter(iso_date_or_interval)
         
         property_context = sumo_grid_object.grid_properties.filter(name=property_name, time=time_filter)
         if await property_context.length_async() == 0:
-            raise LookupError(
-                f"No grid property named '{property_name}' with time='{iso_date_or_interval}' found for grid '{grid_name}', ensemble '{self._ensemble_name}', case '{self._case_uuid}', and realization {realization}"
+            raise NoDataError(
+                f"No grid property named '{property_name}' with time='{iso_date_or_interval}' found for grid '{grid_name}', ensemble '{self._ensemble_name}', case '{self._case_uuid}', and realization {realization}",
+                Service.SUMO
             )
         
         # Expect unique property:
         if len(property_context) != 1:
-            raise ValueError(
-                f"Expected exactly one grid property with name='{property_name}' and time='{iso_date_or_interval}', found {len(property_context)}"
+            raise MultipleDataMatchesError(
+                f"Expected exactly one grid property with name='{property_name}' and time='{iso_date_or_interval}', found {len(property_context)}",
+                Service.SUMO
             )
         
         grid_property = property_context[0]
