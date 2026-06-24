@@ -20,11 +20,11 @@ class CaseSummary:
 class CaseInventoryAccess:
     """Read-only access to the case inventory in Sumo."""
 
-    def get_asset_names(self) -> list[str]:
-        return list(get_explorer().asset_names)
+    def get_asset_names(self, access_token: str | None) -> list[str]:
+        return list(get_explorer(access_token).asset_names)
 
-    def get_cases_for_asset(self, asset_name: str) -> list[CaseSummary]:
-        cases = get_explorer().cases.filter(asset=asset_name)
+    def get_cases_for_asset(self, access_token:str, asset_name: str) -> list[CaseSummary]:
+        cases = get_explorer(access_token).cases.filter(asset=asset_name)
         return [
             CaseSummary(
                 id=c.uuid,
@@ -37,14 +37,14 @@ class CaseInventoryAccess:
             for c in cases
         ]
 
-    def get_ensemble_names(self, case_uuid: str) -> list[str]:
-        case = get_case_by_uuid(case_uuid)
+    def get_ensemble_names(self, access_token: str, case_uuid: str) -> list[str]:
+        case = get_case_by_uuid(access_token, case_uuid)
         return list(case.ensembles.ensemblenames)
 
     async def get_ensemble_realization_ids_async(
-        self, case_uuid: str, ensemble_name: str
+        self, access_token: str, case_uuid: str, ensemble_name: str
     ) -> list[int]:
-        case = get_case_by_uuid(case_uuid)
+        case = get_case_by_uuid(access_token, case_uuid)
         ensemble = case.filter(ensemble=ensemble_name, realization=True)
         realization_ids = await ensemble.realizationids_async
         return sorted(int(r) for r in realization_ids)

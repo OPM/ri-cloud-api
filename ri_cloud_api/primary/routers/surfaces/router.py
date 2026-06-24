@@ -6,13 +6,17 @@ Placeholder router; endpoints to be added once we wire up a
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 
 router = APIRouter(tags=["surfaces"])
 
 
 @router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/surfaces")
-def get_surfaces(case_uuid: str, ensemble_name: str) -> list[dict[str, str]]:
+def get_surfaces(
+	case_uuid: str,
+	ensemble_name: str,
+	authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),	
+) -> list[dict[str, str]]:
 	"""Placeholder surfaces endpoint until SurfacesAccess is implemented."""
-	_ = (case_uuid, ensemble_name)
+	_ = (authorization, case_uuid, ensemble_name)
 	return []

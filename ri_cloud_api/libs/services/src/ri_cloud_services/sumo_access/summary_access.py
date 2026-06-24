@@ -19,13 +19,14 @@ _SUMMARY_METADATA_COLUMNS = {"DATE", "REAL", "ENSEMBLE", "ITER"}
 class SummaryAccess:
     """Access summary (timeseries) data for a given Sumo case + ensemble."""
 
-    def __init__(self, case_uuid: str, ensemble_name: str) -> None:
+    def __init__(self, access_token: str, case_uuid: str, ensemble_name: str) -> None:
+        self._access_token = access_token
         self._case_uuid = case_uuid
         self._ensemble_name = ensemble_name
 
     @classmethod
-    def from_case_uuid(cls, case_uuid: str, ensemble_name: str) -> "SummaryAccess":
-        return cls(case_uuid=case_uuid, ensemble_name=ensemble_name)
+    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "SummaryAccess":
+        return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
 
     async def get_available_vectors_async(self) -> list[str]:
         """Return the list of available summary vector names.
@@ -33,7 +34,7 @@ class SummaryAccess:
         Uses the summary table associated with the ensemble. Metadata
         columns (DATE, REAL, ENSEMBLE, ITER) are filtered out.
         """
-        case = get_case_by_uuid(self._case_uuid)
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         table_context = case.tables.filter(ensemble=self._ensemble_name, standard_result="simulationtimeseries")
         # table_context = case.tables.filter(
@@ -75,7 +76,7 @@ class SummaryAccess:
         OAuth Bearer token (same token used for Sumo API access).
         """
 
-        case = get_case_by_uuid(self._case_uuid)
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         # TODO: Ensure only one table name?
         sc_per_real_tables = case.tables.filter(

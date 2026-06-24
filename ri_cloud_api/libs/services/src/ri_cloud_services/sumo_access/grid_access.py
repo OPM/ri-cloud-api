@@ -45,17 +45,18 @@ def get_time_filter(time_or_interval_str: Optional[str]) -> TimeFilter:
 class GridAccess:
     """Access grid data for a given Sumo case + ensemble."""
 
-    def __init__(self, case_uuid: str, ensemble_name: str) -> None:
+    def __init__(self, access_token:str,case_uuid: str, ensemble_name: str) -> None:
+        self._access_token = access_token
         self._case_uuid = case_uuid
         self._ensemble_name = ensemble_name
 
     @classmethod
-    def from_case_uuid(cls, case_uuid: str, ensemble_name: str) -> "GridAccess":
-        return cls(case_uuid=case_uuid, ensemble_name=ensemble_name)
+    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "GridAccess":
+        return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
     
     async def get_available_grid_info_list_async(self) -> list[GridInfo]:
         """Return the list of available grids with their realizations."""
-        case = get_case_by_uuid(self._case_uuid)
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.grids.filter(ensemble=self._ensemble_name)
         if await grid_context.length_async() == 0:
@@ -83,7 +84,7 @@ class GridAccess:
 
     async def get_grid_blob_url_async(self, grid_name: str, realization: int) -> str:
         """Get the blob URL for the grid data for the given case + ensemble."""
-        case = get_case_by_uuid(self._case_uuid)
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
         if await grid_context.length_async() == 0:
@@ -111,7 +112,7 @@ class GridAccess:
     
     async def get_grid_properties_async(self, grid_name: str, realization: int) -> list[GridPropertyInfo]:
         """Get the properties for a grid."""
-        case = get_case_by_uuid(self._case_uuid)
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
         if await grid_context.length_async() == 0:
@@ -178,7 +179,7 @@ class GridAccess:
         iso_date_or_interval: str | None,
     ) -> str:
         """Get the blob URL for a grid property."""
-        case = get_case_by_uuid(self._case_uuid)
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
         if await grid_context.length_async() == 0:

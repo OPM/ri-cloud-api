@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import os
-from functools import lru_cache
 
 from fmu.sumo.explorer import Explorer
 from fmu.sumo.explorer.objects import Case
@@ -20,20 +19,22 @@ logger = logging.getLogger("ri_cloud_api.sumo_access")
 SUMO_ENV = os.environ.get("SUMO_ENV", "prod")
 
 
-@lru_cache(maxsize=1)
-def get_explorer() -> Explorer:
+def get_explorer(access_token: str) -> Explorer:
     """Return a process-wide cached Explorer instance."""
-    logger.info("Creating fmu-sumo Explorer (env=%s)", SUMO_ENV)
-    return Explorer(env=SUMO_ENV)
+
+    # TODO: ONLY PRINT TOKEN IN DEBUG MODE
+    logger.info("Creating fmu-sumo Explorer (env=%s) with token=%s", SUMO_ENV, access_token)
+
+    return Explorer(env=SUMO_ENV, token=access_token)
 
 
-def get_case_by_uuid(case_uuid: str) -> Case:
+def get_case_by_uuid(access_token: str, case_uuid: str) -> Case:
     """Look up a Sumo case by uuid.
 
     Raises NoDataError if the case cannot be found; routers translate this
     into an HTTP 404.
     """
     try:
-        return get_explorer().get_case_by_uuid(case_uuid)
+        return get_explorer(access_token).get_case_by_uuid(case_uuid)
     except Exception as exc:  # fmu-sumo raises a variety of error types
         raise NoDataError(f"Case '{case_uuid}' not found: {exc}", Service.SUMO) from exc
