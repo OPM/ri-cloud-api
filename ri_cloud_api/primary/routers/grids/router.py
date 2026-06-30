@@ -11,7 +11,7 @@ from ri_cloud_services.sumo_access.grid_access import GridAccess
 
 from ri_cloud_api.primary.utils.router_headers import extract_required_token
 
-from .schemas import GridInfo, GridPropertyInfo
+from . import schemas
 
 router = APIRouter(tags=["grids"])
 
@@ -20,7 +20,7 @@ async def get_grid_info_list(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
     case_uuid: str = Path(description="Sumo case uuid"),
     ensemble_name: str = Path(description="Ensemble name")
-) -> list[GridInfo]:
+) -> list[schemas.GridInfo]:
     """List available grids, with their realizations, for the given case + ensemble."""
     access_token = extract_required_token(authorization)
     access = GridAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
@@ -29,7 +29,7 @@ async def get_grid_info_list(
         grids = await access.get_available_grid_info_list_async()
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return [GridInfo(name=g.name, realizations=g.realizations) for g in grids]
+    return [schemas.GridInfo(name=g.name, realizations=g.realizations) for g in grids]
 
 
 @router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grids/{grid_name}/realizations/{realization}/blob_id")
@@ -56,7 +56,7 @@ async def get_grid_property_info_list(
     ensemble_name: str = Path(description="Ensemble name"),
     grid_name: str = Path(description="Grid name"),
     realization: int = Path(description="Realization id"),
-) -> list[GridPropertyInfo]:
+) -> list[schemas.GridPropertyInfo]:
     """Get grid property metadata for the given case + ensemble + grid + realization."""
     access_token = extract_required_token(authorization)
     access = GridAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
@@ -65,7 +65,7 @@ async def get_grid_property_info_list(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [
-        GridPropertyInfo(
+        schemas.GridPropertyInfo(
             propertyName=prop.property_name,
             isoDateOrInterval=prop.iso_date_or_interval,
         )

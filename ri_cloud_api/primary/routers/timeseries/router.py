@@ -13,7 +13,7 @@ from ri_cloud_services.sumo_access.summary_access import SummaryAccess
 
 from ri_cloud_api.primary.utils.router_headers import extract_required_token
 
-from .schemas import VectorInfo
+from . import schemas
 
 router = APIRouter(tags=["timeseries"])
 
@@ -23,7 +23,7 @@ async def get_vector_list(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
     case_uuid: str = Path(description="Sumo case uuid"),
     ensemble_name: str = Path(description="Ensemble name"),
-) -> list[VectorInfo]:
+) -> list[schemas.VectorInfo]:
     """List available summary vector names for the given case + ensemble."""
     access_token = extract_required_token(authorization)
     
@@ -32,7 +32,7 @@ async def get_vector_list(
         names = await access.get_available_vectors_async()
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return [VectorInfo(name=n) for n in names]
+    return [schemas.VectorInfo(name=n) for n in names]
 
 
 @router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/vectors/{vector_name}/blob_id")
