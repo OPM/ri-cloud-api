@@ -1,12 +1,12 @@
 [project]
 name = "ri-cloud-api"
-authors = ["Jørgen Herje <jorgen.herje@gmail.com>"]
+authors = [{ name = "Jørgen Herje", email = "jorgen.herje@gmail.com" }]
 requires-python = "^3.11"
 version = "0.0.0"
 description = "Local-hosted backend service bridging Sumo data into ResInsight over a FastAPI HTTP API."
 
 [tool.poetry]
-requires-poetry = ">=2.4"
+requires-poetry = ">=2.1"
 package-mode = false
 readme = "README.md"
 packages = [{ include = "ri_cloud_api" },
@@ -20,6 +20,7 @@ fastapi = "^0.115.0"
 uvicorn = { extras = ["standard"], version = "^0.32.0" }
 pydantic = "^2.9.0"
 fmu-sumo = "^2.15.0"
+sumo-wrapper-python = "^1.7.0"
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
