@@ -17,9 +17,14 @@ from __future__ import annotations
 
 import logging
 
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
 from fastapi import FastAPI
+from ri_cloud_services.utils.httpx_async_client_wrapper import HTTPX_ASYNC_CLIENT_WRAPPER
 
 from .utils.exception_handlers import add_exception_handlers
+from .routers.blob_access.router import router as blob_access_router
 from .routers.explore.router import router as explore_router
 from .routers.polygons.router import router as polygons_router
 from .routers.surfaces.router import router as surfaces_router
@@ -29,11 +34,24 @@ from .routers.grids.router import router as grids_router
 logger = logging.getLogger("ri_cloud_api")
 logging.basicConfig(level=logging.INFO)
 
+@asynccontextmanager
+async def lifespan_handler_async(_fastapi_app: FastAPI) -> AsyncIterator[None]:
+    # The first part of this function, before the yield, will be executed before the FastPI application starts.
+    HTTPX_ASYNC_CLIENT_WRAPPER.start()
+    # This part, after the yield, will be executed after the application has finished.
+    yield
 
-app = FastAPI(title="ResInsight Cloud API")
+    await HTTPX_ASYNC_CLIENT_WRAPPER.stop_async()
+
+
+app = FastAPI(
+    title="ResInsight Cloud API",
+    lifespan=lifespan_handler_async
+)
 
 add_exception_handlers(app)
 
+app.include_router(blob_access_router)
 app.include_router(explore_router)
 app.include_router(timeseries_router)
 app.include_router(polygons_router)
