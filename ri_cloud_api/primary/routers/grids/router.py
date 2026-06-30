@@ -31,23 +31,23 @@ async def get_grid_info_list(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [GridInfo(name=g.name, realizations=g.realizations) for g in grids]
 
-@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grids/{grid_name}/realizations/{realization}/blob_url")
-async def get_grid_blob_url(
+
+@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grids/{grid_name}/realizations/{realization}/blob_id")
+async def get_grid_blob_id(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
     case_uuid: str = Path(description="Sumo case uuid"),
     ensemble_name: str = Path(description="Ensemble name"),
     grid_name: str = Path(description="Grid name"),
     realization: int = Path(description="Realization id"),
 ) -> str:
-    """Get the blob URL for the grid data for the given case + ensemble."""
+    """Get the blob ID for the grid data for the given case + ensemble."""
     access_token = extract_required_token(authorization)
     access = GridAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
     try:
-        url = await access.get_grid_blob_url_async(grid_name, realization)
+        blob_id = await access.get_grid_blob_id_async(grid_name, realization)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return url
-
+    return blob_id
 
 @router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grids/{grid_name}/realizations/{realization}/property_info_list")
 async def get_grid_property_info_list(
@@ -72,8 +72,8 @@ async def get_grid_property_info_list(
         for prop in properties
     ]
 
-@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grids/{grid_name}/realizations/{realization}/properties/{property_name}/blob_url")
-async def get_grid_property_blob_url(
+@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grids/{grid_name}/realizations/{realization}/properties/{property_name}/blob_id")
+async def get_grid_property_blob_id(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
     case_uuid: str = Path(description="Sumo case uuid"),
     ensemble_name: str = Path(description="Ensemble name"),
@@ -84,11 +84,11 @@ async def get_grid_property_blob_url(
         default=None, description="Time point or time interval string"
     ),
 ) -> str:
-    """Get the blob URL for a grid property."""
+    """Get the blob ID for a grid property."""
     access_token = extract_required_token(authorization)
     access = GridAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
     try:
-        url = await access.get_grid_property_blob_url_async(grid_name, realization, property_name, property_iso_date_or_interval)
+        blob_id = await access.get_grid_property_blob_id_async(grid_name, realization, property_name, property_iso_date_or_interval)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return url
+    return blob_id

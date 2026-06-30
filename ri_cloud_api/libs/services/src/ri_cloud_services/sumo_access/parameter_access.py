@@ -15,24 +15,39 @@ from ._explorer import get_case_by_uuid
 class ParameterAccess:
     """Access parameter data for a given Sumo case + ensemble."""
 
-    def __init__(self, case_uuid: str, ensemble_name: str) -> None:
+    def __init__(self, access_token: str, case_uuid: str, ensemble_name: str) -> None:
+        self._access_token = access_token
         self._case_uuid = case_uuid
         self._ensemble_name = ensemble_name
 
     @classmethod
-    def from_case_uuid(cls, case_uuid: str, ensemble_name: str) -> "ParameterAccess":
-        return cls(case_uuid=case_uuid, ensemble_name=ensemble_name)
+    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "ParameterAccess":
+        return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
+    
+    async def get_parameters_blob_id_async(self) -> str:
+        """Get the blob ID for the given parameter table
 
-    async def get_parameters_blob_url_async(self) -> str:
-        """Get the blob URL for the given parameter table
+        The temporary solution is not optimized, so we trigger aggregation to ensure the blob ID is available, this triggers an aggregation 
 
-        The temporary solution is not optimized, so we trigger aggregation to ensure the blob URL is available, this triggers an aggregation 
+        Returns the raw Azure blob ID. The caller should authenticate using
+        OAuth Bearer token (same token used for Sumo API access).
+        """
+        parameter_agg = await self.get_parameters_agg_table_async()
 
-        Returns the raw Azure blob URL. The caller should authenticate using
+        blob_name = parameter_agg.metadata["_sumo"]["blob_name"]
+
+        return blob_name
+    
+    async def get_parameters_agg_table_async(self) -> Table:
+        """Get the aggregated table for the given parameter table
+
+        The temporary solution is not optimized, so we trigger aggregation to ensure the aggregated table is available, this triggers an aggregation 
+
+        Returns the aggregated table object. The caller should authenticate using
         OAuth Bearer token (same token used for Sumo API access).
         """
 
-        case = get_case_by_uuid(self._case_uuid)
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         sc_ensemble = case.filter(ensemble=self._ensemble_name)
         sc_parameters_per_real = sc_ensemble.filter(realization=True, aggregation=False).parameters
@@ -55,7 +70,4 @@ class ParameterAccess:
         if not isinstance(parameter_agg, Table):
             raise InvalidDataError("Did not get expected object type of Table for parameter aggregation", Service.SUMO)
         
-
-        blob_url = parameter_agg.metadata["_sumo"]["blob_url"]
-
-        return blob_url
+        return parameter_agg

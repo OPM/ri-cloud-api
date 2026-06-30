@@ -67,23 +67,41 @@ class SummaryAccess:
         vector_names = list(set(column_names) - _SUMMARY_METADATA_COLUMNS)
         return vector_names
 
-    async def get_vector_blob_url_async(self, vector_name: str) -> str:
-        """Get the blob URL for the given summary vector.
+    async def get_vector_blob_id_async(self, vector_name: str) -> str:
+        """Get the blob ID for the given summary vector.
 
-        The temporary solution is not optimized, so we trigger aggregation to ensure the blob URL is available, this triggers an aggregation 
+        The temporary solution is not optimized, so we trigger aggregation to ensure the blob ID is available,
+        this triggers an aggregation 
 
-        Returns the raw Azure blob URL. The caller should authenticate using
+        Returns the raw Azure blob ID. The caller should authenticate using
         OAuth Bearer token (same token used for Sumo API access).
         """
+        agg_table = await self._get_vector_agg_table(vector_name)
+
+        blob_name = agg_table.metadata["_sumo"]["blob_name"]
+
+        print(f"DEBUG: Blob name for vector '{vector_name}': {blob_name}")
+
+        return blob_name
+    
+    async def _get_vector_agg_table(self, vector_name: str):
+        """Get the aggregated table for the given summary vector.
+
+        The temporary solution is not optimized, so we trigger aggregation to ensure the aggregated table is available,
+        this triggers an aggregation 
+
+        Returns the aggregated table object. The caller should authenticate using
+        OAuth Bearer token (same token used for Sumo API access).
+        """
+        #TODO: Replace with more efficient way to get the aggregated table for a vector, without having to download
+        #      the entire table, just read the metadata.
 
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
-        # TODO: Ensure only one table name?
         sc_per_real_tables = case.tables.filter(
             ensemble=self._ensemble_name,
             column=vector_name,
-            standard_result="simulationtimeseries", # TODO: Use standard_result type from fmu-data-io?
-            # tagname="summary",
+            standard_result="simulationtimeseries", #TODO: Use standard_result type from fmu-data-io?
             realization=True
         )
 
@@ -104,8 +122,4 @@ class SummaryAccess:
             column=vector_name
         )
 
-        blob_url = agg_table.metadata["_sumo"]["blob_url"]
-
-        print(f"DEBUG: Blob URL for vector '{vector_name}': {blob_url}")
-
-        return blob_url
+        return agg_table

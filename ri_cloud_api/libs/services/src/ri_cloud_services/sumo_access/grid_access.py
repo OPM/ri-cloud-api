@@ -82,8 +82,9 @@ class GridAccess:
             )
         return grid_infos
 
-    async def get_grid_blob_url_async(self, grid_name: str, realization: int) -> str:
-        """Get the blob URL for the grid data for the given case + ensemble."""
+    
+    async def get_grid_blob_id_async(self, grid_name: str, realization: int) -> str:
+        """Get the blob ID for the grid data for the given case + ensemble."""
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
@@ -94,21 +95,16 @@ class GridAccess:
                 Service.SUMO
             )
         
-        table_names = await grid_context.names_async
-        if len(table_names) == 0:
-            raise NoDataError(
-                f"No grid tables found in case={self._case_uuid}, ensemble={self._ensemble_name}",
-                Service.SUMO
-            )
-        if len(table_names) > 1:
-            raise MultipleDataMatchesError(
-                f"Multiple grid tables found in case={self._case_uuid}, ensemble={self._ensemble_name}: {table_names=}",
-                Service.SUMO
-            )
+        # Expect unique grid:
+        if len(grid_context) != 1:
+            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}", Service.SUMO)
         
-        grid_table = await grid_context.getitem_async(0)
-        blob_url = grid_table.metadata["_sumo"]["blob_url"]
-        return blob_url
+        grid_document = await grid_context.getitem_async(0)
+        if not isinstance(grid_document, CPGrid):
+            raise InvalidDataError(f"Expected CPGrid, got {type(grid_document)}", Service.SUMO)
+        
+        blob_id = grid_document.metadata["_sumo"]["blob_name"]
+        return blob_id
     
     async def get_grid_properties_async(self, grid_name: str, realization: int) -> list[GridPropertyInfo]:
         """Get the properties for a grid."""
@@ -126,13 +122,13 @@ class GridAccess:
         if len(grid_context) != 1:
             raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}", Service.SUMO)
         
-        sumo_grid_object = grid_context[0]
-        if not isinstance(sumo_grid_object, CPGrid):
-            raise InvalidDataError(f"Expected CPGrid, got {type(sumo_grid_object)}", Service.SUMO)
+        grid_document = await grid_context.getitem_async(0)
+        if not isinstance(grid_document, CPGrid):
+            raise InvalidDataError(f"Expected CPGrid, got {type(grid_document)}", Service.SUMO)
         
-        no_time_context = sumo_grid_object.grid_properties.filter(time=TimeFilter(time_type=TimeType.NONE))
-        timestamp_context = sumo_grid_object.grid_properties.filter(time=TimeFilter(time_type=TimeType.TIMESTAMP))
-        interval_context = sumo_grid_object.grid_properties.filter(time=TimeFilter(time_type=TimeType.INTERVAL))
+        no_time_context = grid_document.grid_properties.filter(time=TimeFilter(time_type=TimeType.NONE))
+        timestamp_context = grid_document.grid_properties.filter(time=TimeFilter(time_type=TimeType.TIMESTAMP))
+        interval_context = grid_document.grid_properties.filter(time=TimeFilter(time_type=TimeType.INTERVAL))
 
         async with asyncio.TaskGroup() as tg:
             no_time_property_names_task = tg.create_task(no_time_context.names_async)
@@ -170,15 +166,15 @@ class GridAccess:
                 )
 
         return property_info_arr
-    
-    async def get_grid_property_blob_url_async(
+  
+    async def get_grid_property_blob_id_async(
         self,
         grid_name: str,
         realization: int,
         property_name: str,
         iso_date_or_interval: str | None,
     ) -> str:
-        """Get the blob URL for a grid property."""
+        """Get the blob ID for a grid property."""
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
@@ -190,16 +186,16 @@ class GridAccess:
             )
         
         # Expect unique grid:
-        if len(grid_context) != 1:
-            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}", Service.SUMO)
+        if await grid_context.length_async() != 1:
+            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {await grid_context.length_async()}", Service.SUMO)
         
-        sumo_grid_object = grid_context[0]
-        if not isinstance(sumo_grid_object, CPGrid):
-            raise InvalidDataError(f"Expected CPGrid, got {type(sumo_grid_object)}", Service.SUMO)
+        grid_document = await grid_context.getitem_async(0)
+        if not isinstance(grid_document, CPGrid):
+            raise InvalidDataError(f"Expected CPGrid, got {type(grid_document)}", Service.SUMO)
         
         time_filter = get_time_filter(iso_date_or_interval)
         
-        property_context = sumo_grid_object.grid_properties.filter(name=property_name, time=time_filter)
+        property_context = grid_document.grid_properties.filter(name=property_name, time=time_filter)
         if await property_context.length_async() == 0:
             raise NoDataError(
                 f"No grid property named '{property_name}' with time='{iso_date_or_interval}' found for grid '{grid_name}', ensemble '{self._ensemble_name}', case '{self._case_uuid}', and realization {realization}",
@@ -207,12 +203,13 @@ class GridAccess:
             )
         
         # Expect unique property:
-        if len(property_context) != 1:
+        num_grid_properties = await property_context.length_async()
+        if num_grid_properties != 1:
             raise MultipleDataMatchesError(
-                f"Expected exactly one grid property with name='{property_name}' and time='{iso_date_or_interval}', found {len(property_context)}",
+                f"Expected exactly one grid property with name='{property_name}' and time='{iso_date_or_interval}', found {num_grid_properties}",
                 Service.SUMO
             )
         
-        grid_property = property_context[0]
-        blob_url = grid_property.metadata["_sumo"]["blob_url"]
-        return blob_url
+        grid_property = await property_context.getitem_async(0)
+        blob_id = grid_property.metadata["_sumo"]["blob_name"]
+        return blob_id
