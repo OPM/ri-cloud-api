@@ -47,14 +47,14 @@ source .venv/bin/activate
 poetry install
 ```
 
-**Windows (PowerShell):**
-```powershell
+**Windows (cmd):**
+```cmd
 # 1. Install Poetry globally (outside any virtual environment)
 pip install poetry
 
 # 2. Create and activate a virtual environment
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.venv\Scripts\activate.bat
 
 # 3. Install the project and its dependencies into the venv
 poetry install
@@ -62,13 +62,10 @@ poetry install
 
 The first `poetry install` generates `poetry.lock`; commit that file.
 
-If activation is blocked by the execution policy, allow signed scripts for your
-user once: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`.
-
 ## Running the service
 Start the API with uvicorn from the repository root:
 
-```powershell
+```cmd
 uvicorn ri_cloud_api.primary.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
