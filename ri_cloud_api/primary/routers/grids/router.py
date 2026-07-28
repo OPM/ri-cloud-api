@@ -1,4 +1,5 @@
-"""Grids router
+"""
+Grids router
 
 Exposes endpoints for discovering and (eventually) fetching grid data from Sumo.
 """

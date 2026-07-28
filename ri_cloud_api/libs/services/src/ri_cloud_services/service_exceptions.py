@@ -2,11 +2,17 @@ from enum import Enum
 
 
 class Service(str, Enum):
+    """
+    Enum for the different services that can raise exceptions in the service layer.
+    """
     GENERAL = "general"
     SUMO = "sumo"
 
 
 class ServiceLayerException(Exception):
+    """
+    Base class for exceptions raised by the service layer.
+    """
     def __init__(self, message: str, service: Service):
         super().__init__(f"{message} [service={service.value}]")
         self.message = message
