@@ -6,7 +6,7 @@ version = "0.0.0"
 description = "Local-hosted backend service bridging Sumo data into ResInsight over a FastAPI HTTP API."
 
 [tool.poetry]
-requires-poetry = ">=2.1"
+requires-poetry = ">=2.4"
 readme = "README.md"
 packages = [{ include = "ri_cloud_api" },
             { include = "ri_cloud_services", from = "ri_cloud_api/libs/services/src" },

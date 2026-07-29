@@ -1,0 +1,47 @@
+name: ri-cloud-api
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout commit locally
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install poetry and dependencies
+        run: |
+          set -x
+          pip install --upgrade pip
+          pip install poetry==2.4.1
+          poetry config virtualenvs.create false
+
+          # Check that the lock file is consistent with pyproject.toml
+          poetry check --lock
+
+          poetry install
+
+      - name: Check formatting with black
+        run: black --check .
+
+      - name: Lint with pylint
+        run: pylint ri_cloud_api
+
+      - name: Type check with mypy
+        run: mypy ri_cloud_api
