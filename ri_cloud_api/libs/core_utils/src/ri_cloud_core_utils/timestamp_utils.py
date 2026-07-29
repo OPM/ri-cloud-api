@@ -1,5 +1,6 @@
 import datetime
 
+
 def timestamp_utc_ms_to_iso_str(timestamp_utc_ms: int, always_include_milliseconds: bool = True) -> str:
     """
     Convert integer timestamp in milliseconds UTC to ISO 8601 string
@@ -20,6 +21,7 @@ def timestamp_utc_ms_to_iso_str(timestamp_utc_ms: int, always_include_millisecon
     isostr = isostr.replace("+00:00", "Z")
 
     return isostr
+
 
 def iso_str_to_date_str(iso_str: str) -> str:
     """

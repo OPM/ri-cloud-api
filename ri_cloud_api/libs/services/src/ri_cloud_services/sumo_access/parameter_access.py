@@ -8,9 +8,15 @@ from __future__ import annotations
 
 from fmu.sumo.explorer.objects import Table
 
-from ri_cloud_services.service_exceptions import InvalidDataError, NoDataError, Service, ServiceRequestError
+from ri_cloud_services.service_exceptions import (
+    InvalidDataError,
+    NoDataError,
+    Service,
+    ServiceRequestError,
+)
 
 from ._explorer import get_case_by_uuid
+
 
 class ParameterAccess:
     """Access parameter data for a given Sumo case + ensemble."""
@@ -23,11 +29,11 @@ class ParameterAccess:
     @classmethod
     def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "ParameterAccess":
         return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
-    
+
     async def get_parameters_blob_id_async(self) -> str:
         """Get the blob ID for the given parameter table
 
-        The temporary solution is not optimized, so we trigger aggregation to ensure the blob ID is available, this triggers an aggregation 
+        The temporary solution is not optimized, so we trigger aggregation to ensure the blob ID is available, this triggers an aggregation
 
         Returns the raw Azure blob ID. The caller should authenticate using
         OAuth Bearer token (same token used for Sumo API access).
@@ -37,11 +43,11 @@ class ParameterAccess:
         blob_name = parameter_agg.metadata["_sumo"]["blob_name"]
 
         return blob_name
-    
+
     async def get_parameters_agg_table_async(self) -> Table:
         """Get the aggregated table for the given parameter table
 
-        The temporary solution is not optimized, so we trigger aggregation to ensure the aggregated table is available, this triggers an aggregation 
+        The temporary solution is not optimized, so we trigger aggregation to ensure the aggregated table is available, this triggers an aggregation
 
         Returns the aggregated table object. The caller should authenticate using
         OAuth Bearer token (same token used for Sumo API access).
@@ -56,7 +62,7 @@ class ParameterAccess:
         if realization_count == 0:
             raise NoDataError(
                 f"No parameters found for case {self._case_uuid} and ensemble {self._ensemble_name}",
-                Service.SUMO
+                Service.SUMO,
             )
 
         sc_param_table = sc_ensemble.parameters
@@ -65,10 +71,14 @@ class ParameterAccess:
             parameter_agg = await sc_param_table.aggregation_async(operation="collection")
         except Exception as exp:
             raise ServiceRequestError(
-                f"Parameter aggregation failed for case {self._case_uuid} and ensemble {self._ensemble_name}", Service.SUMO
+                f"Parameter aggregation failed for case {self._case_uuid} and ensemble {self._ensemble_name}",
+                Service.SUMO,
             ) from exp
-        
+
         if not isinstance(parameter_agg, Table):
-            raise InvalidDataError("Did not get expected object type of Table for parameter aggregation", Service.SUMO)
-        
+            raise InvalidDataError(
+                "Did not get expected object type of Table for parameter aggregation",
+                Service.SUMO,
+            )
+
         return parameter_agg

@@ -73,6 +73,4 @@ async def get_ensemble_realizations(
     """List realization ids for a case + ensemble."""
     access_token = extract_required_token(authorization)
     case_inspector = CaseInspector()
-    return await case_inspector.get_ensemble_realization_ids_async(
-        access_token, case_uuid, ensemble_name
-    )
+    return await case_inspector.get_ensemble_realization_ids_async(access_token, case_uuid, ensemble_name)

@@ -7,7 +7,6 @@ description = "Local-hosted backend service bridging Sumo data into ResInsight o
 
 [tool.poetry]
 requires-poetry = ">=2.1"
-package-mode = false
 readme = "README.md"
 packages = [{ include = "ri_cloud_api" },
             { include = "ri_cloud_services", from = "ri_cloud_api/libs/services/src" },
@@ -21,6 +20,40 @@ uvicorn = { extras = ["standard"], version = "^0.32.0" }
 pydantic = "^2.9.0"
 fmu-sumo = "^2.15.0"
 sumo-wrapper-python = "^1.7.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^26.3.1"
+mypy = "^1.18.2"
+pylint = "^4.0.4"
+pytest = "^9.0.3"
+
+[tool.black]
+line-length = 120
+
+
+[tool.mypy]
+python_version = "3.13"
+warn_unused_configs = true
+disallow_untyped_defs = true
+explicit_package_bases = true
+mypy_path = [
+    "ri_cloud_api/libs/services/src",
+    "ri_cloud_api/libs/core_utils/src",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "fmu.sumo.*",
+    "sumo.wrapper.*",
+]
+follow_untyped_imports = true
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "line-too-long",
+    "too-many-positional-arguments",
+]
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]

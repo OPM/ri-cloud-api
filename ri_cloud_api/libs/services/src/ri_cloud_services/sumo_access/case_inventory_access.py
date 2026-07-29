@@ -20,10 +20,10 @@ class CaseSummary:
 class CaseInspector:
     """Read-only access to the case data in Sumo."""
 
-    def get_asset_names(self, access_token: str | None) -> list[str]:
+    def get_asset_names(self, access_token: str) -> list[str]:
         return list(get_explorer(access_token).asset_names)
 
-    def get_cases_for_asset(self, access_token:str, asset_name: str) -> list[CaseSummary]:
+    def get_cases_for_asset(self, access_token: str, asset_name: str) -> list[CaseSummary]:
         cases = get_explorer(access_token).cases.filter(asset=asset_name)
         return [
             CaseSummary(

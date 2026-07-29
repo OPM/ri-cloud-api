@@ -1,7 +1,7 @@
 """Shared Sumo Explorer wiring.
 
- Explorer wiring for this process.
- The case-lookup helper centralizes error handling so individual accessors don't need to repeat it.
+Explorer wiring for this process.
+The case-lookup helper centralizes error handling so individual accessors don't need to repeat it.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from ri_cloud_services.services_config import get_services_config
 from ri_cloud_services.service_exceptions import NoDataError, Service
 
 logger = logging.getLogger("ri_cloud_api.sumo_access")
+
 
 def get_explorer(access_token: str) -> Explorer:
     """Return a process-wide cached Explorer instance."""

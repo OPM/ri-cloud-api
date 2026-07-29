@@ -4,7 +4,9 @@ from sumo.wrapper import SumoClient
 from ri_cloud_services.service_exceptions import AuthorizationError, Service
 
 
-async def get_sas_token_and_blob_base_uri_for_object_id_async(sumo_client: SumoClient, object_id: str) -> tuple[str, str]:
+async def get_sas_token_and_blob_base_uri_for_object_id_async(
+    sumo_client: SumoClient, object_id: str
+) -> tuple[str, str]:
     """
     Get a SAS token and a base URI that allows reading of all children of object_id
     The returned base uri looks something like this:

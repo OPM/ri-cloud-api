@@ -8,6 +8,7 @@ from . import schemas
 
 router = APIRouter(tags=["health"])
 
+
 @router.get("/alive")
 def alive() -> schemas.HealthCheckResponse:
     """Health-check endpoint polled by ResInsight for service life cycle management."""

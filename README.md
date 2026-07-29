@@ -75,4 +75,4 @@ Interactive API documentation is then available at:
 * ReDoc: http://localhost:8000/redoc
 
 ## Configuration
-* `SUMO_ENV` - Sumo environment to connect to (defaults to `prod`).
+* `RI_CLOUD_API_SUMO_ENV` - Sumo environment to connect to (defaults to `prod`).

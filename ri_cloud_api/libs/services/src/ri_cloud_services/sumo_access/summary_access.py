@@ -8,10 +8,14 @@ from __future__ import annotations
 
 from fmu.sumo.explorer.objects import Table
 
-from ri_cloud_services.service_exceptions import InvalidDataError, MultipleDataMatchesError, NoDataError, Service
+from ri_cloud_services.service_exceptions import (
+    InvalidDataError,
+    MultipleDataMatchesError,
+    NoDataError,
+    Service,
+)
 
 from ._explorer import get_case_by_uuid
-
 
 # Non-vector columns that may appear in a summary table and should be filtered
 # out when listing available vectors.
@@ -42,23 +46,22 @@ class SummaryAccess:
 
         if await table_context.length_async() == 0:
             raise NoDataError(
-                f"No summary tables found for ensemble '{self._ensemble_name}' "
-                f"in case '{self._case_uuid}'",
-                Service.SUMO
+                f"No summary tables found for ensemble '{self._ensemble_name}' " f"in case '{self._case_uuid}'",
+                Service.SUMO,
             )
-        
+
         table_names = await table_context.names_async
         if len(table_names) == 0:
             raise NoDataError(
                 f"No summary tables found in case={self._case_uuid}, ensemble={self._ensemble_name}",
-                Service.SUMO
+                Service.SUMO,
             )
         if len(table_names) > 1:
             raise MultipleDataMatchesError(
                 f"Multiple summary tables found in case={self._case_uuid}, ensemble={self._ensemble_name}: {table_names=}",
-                Service.SUMO
+                Service.SUMO,
             )
-        
+
         column_names = await table_context.columns_async
 
         # Get set of columns names, not among ["YEARS", "DATE", "REAL"]
@@ -69,7 +72,7 @@ class SummaryAccess:
         """Get the blob ID for the given summary vector.
 
         The temporary solution is not optimized, so we trigger aggregation to ensure the blob ID is available,
-        this triggers an aggregation 
+        this triggers an aggregation
 
         Returns the raw Azure blob ID. The caller should authenticate using
         OAuth Bearer token (same token used for Sumo API access).
@@ -79,12 +82,12 @@ class SummaryAccess:
         blob_name = agg_table.metadata["_sumo"]["blob_name"]
 
         return blob_name
-    
-    async def _get_vector_agg_table(self, vector_name: str):
+
+    async def _get_vector_agg_table(self, vector_name: str) -> Table:
         """Get the aggregated table for the given summary vector.
 
         The temporary solution is not optimized, so we trigger aggregation to ensure the aggregated table is available,
-        this triggers an aggregation 
+        this triggers an aggregation
 
         Returns the aggregated table object. The caller should authenticate using
         OAuth Bearer token (same token used for Sumo API access).
@@ -94,8 +97,8 @@ class SummaryAccess:
         sc_per_real_tables = case.tables.filter(
             ensemble=self._ensemble_name,
             column=vector_name,
-            standard_result="simulationtimeseries", #TODO: Use standard_result type from fmu-data-io?
-            realization=True
+            standard_result="simulationtimeseries",  # TODO: Use standard_result type from fmu-data-io?
+            realization=True,
         )
 
         table_names = await sc_per_real_tables.names_async
@@ -103,21 +106,21 @@ class SummaryAccess:
         if num_tables == 0:
             raise NoDataError(
                 f"No tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}'",
-                Service.SUMO
+                Service.SUMO,
             )
         if num_tables > 1:
             raise MultipleDataMatchesError(
                 f"Multiple tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}': {table_names}",
-                Service.SUMO
+                Service.SUMO,
             )
 
         # Trigger aggregation if not existing
-        agg_table = await sc_per_real_tables.aggregation_async(
-            operation="collection",
-            column=vector_name
-        )
+        agg_table = await sc_per_real_tables.aggregation_async(operation="collection", column=vector_name)
 
         if not isinstance(agg_table, Table):
-            raise InvalidDataError(f"Did not get expected object type of Table for vector '{vector_name}'", Service.SUMO)
+            raise InvalidDataError(
+                f"Did not get expected object type of Table for vector '{vector_name}'",
+                Service.SUMO,
+            )
 
         return agg_table

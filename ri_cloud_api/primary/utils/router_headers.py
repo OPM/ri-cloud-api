@@ -1,9 +1,9 @@
-
 """Utilities for extracting and validating request headers."""
 
 from __future__ import annotations
 
 from fastapi import HTTPException
+
 
 def extract_required_token(authorization: str | None) -> str:
     """Extract the token from the Authorization header.
@@ -15,6 +15,7 @@ def extract_required_token(authorization: str | None) -> str:
 
     assert authorization is not None
     return extract_bearer_token(authorization)
+
 
 def require_bearer_token(authorization: str | None) -> None:
     """Require and extract Bearer token from Authorization header.

@@ -6,15 +6,15 @@ class AssetInfo(BaseModel):
 
 
 class CaseInfo(BaseModel):
+    # Could add ensemble info here, to avoid an extra query per case
     id: str
     name: str
     asset: str | None = None
     field: str | None = None
     status: str | None = None
     user: str | None = None
-    # TODO: add ensemble info here, to avoid an extra query per case
 
 
 class EnsembleInfo(BaseModel):
+    # Could include realization ids once we can get them cheaply per ensemble
     name: str
-    # TODO: include realization ids once we can get them cheaply per ensemble
