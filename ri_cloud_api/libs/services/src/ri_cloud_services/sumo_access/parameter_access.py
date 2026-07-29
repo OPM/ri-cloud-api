@@ -61,6 +61,7 @@ class ParameterAccess:
 
         sc_param_table = sc_ensemble.parameters
         try:
+            # Trigger aggregation if not existing
             parameter_agg = await sc_param_table.aggregation_async(operation="collection")
         except Exception as exp:
             raise ServiceRequestError(

@@ -6,7 +6,9 @@ deal with simple, typed return values.
 
 from __future__ import annotations
 
-from ri_cloud_services.service_exceptions import MultipleDataMatchesError, NoDataError, Service
+from fmu.sumo.explorer.objects import Table
+
+from ri_cloud_services.service_exceptions import InvalidDataError, MultipleDataMatchesError, NoDataError, Service
 
 from ._explorer import get_case_by_uuid
 
@@ -87,9 +89,6 @@ class SummaryAccess:
         Returns the aggregated table object. The caller should authenticate using
         OAuth Bearer token (same token used for Sumo API access).
         """
-        #TODO: Replace with more efficient way to get the aggregated table for a vector, without having to download
-        #      the entire table, just read the metadata.
-
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         sc_per_real_tables = case.tables.filter(
@@ -117,5 +116,8 @@ class SummaryAccess:
             operation="collection",
             column=vector_name
         )
+
+        if not isinstance(agg_table, Table):
+            raise InvalidDataError(f"Did not get expected object type of Table for vector '{vector_name}'", Service.SUMO)
 
         return agg_table
