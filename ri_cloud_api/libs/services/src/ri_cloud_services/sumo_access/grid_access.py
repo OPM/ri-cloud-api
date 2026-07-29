@@ -5,7 +5,7 @@ from typing import Optional
 from fmu.sumo.explorer.objects import CPGrid
 from fmu.sumo.explorer import TimeFilter, TimeType
 
-from ri_cloud_core_utils.timestamp_utils import iso_str_to_date_str
+from ri_cloud_core_utils.timestamp_utils import iso_str_to_date_str, timestamp_utc_ms_to_iso_str
 from ri_cloud_services.service_exceptions import (
     InvalidDataError, 
     InvalidParameterError, 
@@ -23,7 +23,7 @@ def get_time_filter(time_or_interval_str: Optional[str]) -> TimeFilter:
 
     else:
         timestamp_arr = time_or_interval_str.split("/", 1)
-        if len(timestamp_arr) == 0 or len(timestamp_arr) > 2:
+        if timestamp_arr[0] == "" or (len(timestamp_arr) == 2 and timestamp_arr[1] == ""):
             raise InvalidParameterError("time_or_interval_str must contain a single timestamp or interval", Service.SUMO)
         if len(timestamp_arr) == 1:
             time_filter = TimeFilter(
@@ -88,7 +88,9 @@ class GridAccess:
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
-        if await grid_context.length_async() == 0:
+        num_grids = await grid_context.length_async()
+
+        if num_grids == 0:
             raise NoDataError(
                 f"No grid table named '{grid_name}' found for ensemble '{self._ensemble_name}' "
                 f"in case '{self._case_uuid}', and realization {realization}",
@@ -96,8 +98,8 @@ class GridAccess:
             )
         
         # Expect unique grid:
-        if len(grid_context) != 1:
-            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {len(grid_context)}", Service.SUMO)
+        if num_grids != 1:
+            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {num_grids}", Service.SUMO)
         
         grid_document = await grid_context.getitem_async(0)
         if not isinstance(grid_document, CPGrid):
@@ -107,7 +109,11 @@ class GridAccess:
         return blob_id
     
     async def get_grid_properties_async(self, grid_name: str, realization: int) -> list[GridPropertyInfo]:
-        """Get the properties for a grid."""
+        """Get the properties for a grid.
+        
+        The valid timestamps/intervals are resolved per property using composite aggregations, so that
+        each property only reports the time points/intervals that actually exist for that property.
+        """
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
@@ -132,38 +138,44 @@ class GridAccess:
 
         async with asyncio.TaskGroup() as tg:
             no_time_property_names_task = tg.create_task(no_time_context.names_async)
-            timestamp_property_names_task = tg.create_task(timestamp_context.names_async)
-            timestamp_property_timestamps_task = tg.create_task(timestamp_context.timestamps_async)
-            interval_property_names_task = tg.create_task(interval_context.names_async)
-            interval_property_intervals_task = tg.create_task(interval_context.intervals_async)
+            timestamp_buckets_task = tg.create_task(
+                timestamp_context.get_composite_agg_async({"name": "data.name.keyword", "t0": "data.time.t0.value"})
+            )
+            interval_buckets_task = tg.create_task(
+                interval_context.get_composite_agg_async(
+                    {"name": "data.name.keyword", "t0": "data.time.t0.value", "t1": "data.time.t1.value"}
+                )
+            )
 
         no_time_property_names = no_time_property_names_task.result()
-        timestamp_property_names = timestamp_property_names_task.result()
-        timestamp_property_timestamps = timestamp_property_timestamps_task.result()
-        interval_property_names = interval_property_names_task.result()
-        interval_property_intervals = interval_property_intervals_task.result()
+        timestamp_buckets = timestamp_buckets_task.result()
+        interval_buckets = interval_buckets_task.result()
 
         property_info_arr: list[GridPropertyInfo] = []
 
         for property_name in no_time_property_names:
             property_info_arr.append(GridPropertyInfo(property_name=property_name, iso_date_or_interval=None))
-        for property_name in timestamp_property_names:
-            for timestamp in timestamp_property_timestamps:
-                property_info_arr.append(
-                    GridPropertyInfo(
-                        property_name=property_name,
-                        iso_date_or_interval=iso_str_to_date_str(timestamp),
-                    )
-                )
-        for property_name in interval_property_names:
 
-            for interval in interval_property_intervals:
-                property_info_arr.append(
-                    GridPropertyInfo(
-                        property_name=property_name,
-                        iso_date_or_interval=f"{iso_str_to_date_str(interval[0])}/{iso_str_to_date_str(interval[1])}",
-                    )
+        # Each bucket is a unique (property name, timestamp) combination that actually exists in Sumo.
+        # The time field values are returned as epoch milliseconds by the composite aggregation.
+        for bucket in timestamp_buckets:
+            property_info_arr.append(
+                GridPropertyInfo(
+                    property_name=bucket["name"],
+                    iso_date_or_interval=iso_str_to_date_str(timestamp_utc_ms_to_iso_str(bucket["t0"])),
                 )
+            )
+
+        # Each bucket is a unique (property name, interval) combination that actually exists in Sumo.
+        for bucket in interval_buckets:
+            start_date = iso_str_to_date_str(timestamp_utc_ms_to_iso_str(bucket["t0"]))
+            end_date = iso_str_to_date_str(timestamp_utc_ms_to_iso_str(bucket["t1"]))
+            property_info_arr.append(
+                GridPropertyInfo(
+                    property_name=bucket["name"],
+                    iso_date_or_interval=f"{start_date}/{end_date}",
+                )
+            )
 
         return property_info_arr
   
@@ -178,7 +190,9 @@ class GridAccess:
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name, realization=realization)
-        if await grid_context.length_async() == 0:
+        num_grids = await grid_context.length_async()
+
+        if num_grids == 0:
             raise NoDataError(
                 f"No grid table named '{grid_name}' found for ensemble '{self._ensemble_name}' "
                 f"in case '{self._case_uuid}', and realization {realization}",
@@ -186,8 +200,8 @@ class GridAccess:
             )
         
         # Expect unique grid:
-        if await grid_context.length_async() != 1:
-            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {await grid_context.length_async()}", Service.SUMO)
+        if num_grids != 1:
+            raise MultipleDataMatchesError(f"Expected exactly one grid with name '{grid_name}', found {num_grids}", Service.SUMO)
         
         grid_document = await grid_context.getitem_async(0)
         if not isinstance(grid_document, CPGrid):

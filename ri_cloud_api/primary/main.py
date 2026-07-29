@@ -22,6 +22,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from ri_cloud_services.utils.httpx_async_client_wrapper import HTTPX_ASYNC_CLIENT_WRAPPER
+from ri_cloud_services.services_config import ServicesConfig, init_services_config
 
 from .utils.exception_handlers import add_exception_handlers
 from .routers.blob_access.router import router as blob_access_router
@@ -32,8 +33,15 @@ from .routers.polygons.router import router as polygons_router
 from .routers.surfaces.router import router as surfaces_router
 from .routers.timeseries.router import router as timeseries_router
 
+from . import config
+
 logger = logging.getLogger("ri_cloud_api")
 logging.basicConfig(level=logging.INFO)
+
+services_config = ServicesConfig(
+    sumo_env=config.SUMO_ENV
+)
+init_services_config(services_config)
 
 @asynccontextmanager
 async def lifespan_handler_async(_fastapi_app: FastAPI) -> AsyncGenerator[None, None]:

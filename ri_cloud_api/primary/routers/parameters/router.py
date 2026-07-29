@@ -7,7 +7,7 @@ to ``ParameterAccess`` in the service layer.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Header, Path
+from fastapi import APIRouter, Header, Path
 
 from ri_cloud_services.sumo_access.parameter_access import ParameterAccess
 
@@ -24,10 +24,7 @@ async def get_parameters_blob_id(
 ) -> str:
     """Get the blob ID for the parameters table for the given case + ensemble"""
     access_token = extract_required_token(authorization)
-
     access = ParameterAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
-    try:
-        blob_id = await access.get_parameters_blob_id_async()
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    blob_id = await access.get_parameters_blob_id_async()
     return blob_id

@@ -17,8 +17,8 @@ class CaseSummary:
     user: str | None
 
 
-class CaseInventoryAccess:
-    """Read-only access to the case inventory in Sumo."""
+class CaseInspector:
+    """Read-only access to the case data in Sumo."""
 
     def get_asset_names(self, access_token: str | None) -> list[str]:
         return list(get_explorer(access_token).asset_names)

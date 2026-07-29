@@ -32,25 +32,25 @@ class AuthorizationError(ServiceLayerException):
 
 class ServiceTimeoutError(ServiceLayerException):
     """
-    Some underlying service timed out, eg. Sumo timed out.
+    Some underlying service timed out, e.g. Sumo timed out.
     """
 
 
 class ServiceUnavailableError(ServiceLayerException):
     """
-    Some underlying service is unavailable, eg. Sumo is down.
+    Some underlying service is unavailable, e.g. Sumo is down.
     """
 
 
 class ServiceRequestError(ServiceLayerException):
     """
-    An error occurred while make a call/request to some underlying service, eg. when making an REST call to a user session service
+    An error occurred while making a call/request to some underlying service, e.g. when making a REST call to a user session service
     """
 
 
 class InvalidDataError(ServiceLayerException):
     """
-    Raised when the source data is invalid for a service operation, eg. we get invalid data from Sumo.
+    Raised when the source data is invalid for a service operation, e.g. we get invalid data from Sumo.
     """
 
 
@@ -62,7 +62,7 @@ class NoDataError(ServiceLayerException):
 
 class MultipleDataMatchesError(ServiceLayerException):
     """
-    Raised when som operation expects to find exactly one data item, but actually finds multiple items.
+    Raised when some operation expects to find exactly one data item, but actually finds multiple items.
     """
 
 

@@ -13,6 +13,7 @@ def extract_required_token(authorization: str | None) -> str:
     """
     require_bearer_token(authorization)
 
+    assert authorization is not None
     return extract_bearer_token(authorization)
 
 def require_bearer_token(authorization: str | None) -> None:
@@ -38,14 +39,20 @@ def extract_bearer_token(authorization: str) -> str:
     Raises:
         HTTPException: If the header is missing or malformed
     """
+    auth = authorization.strip()
+
     # Handle "Bearer <token>" format
-    if " " in authorization:
-        parts = authorization.split(" ", 1)
-        if parts[0].lower() == "bearer":
-            return parts[1]
-        raise HTTPException(
-            status_code=401, detail="Invalid Authorization header format"
-        )
+    if " " in auth:
+        scheme, token = auth.split(" ", 1)
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid Authorization header format")
+        token = token.strip()
+        if not token:
+            raise HTTPException(status_code=401, detail="Invalid Authorization header format")
+        return token
+    # Reject "Bearer" without a token
+    if auth.lower() == "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
 
     # If no "Bearer " prefix, treat the whole value as the token
-    return authorization
+    return auth

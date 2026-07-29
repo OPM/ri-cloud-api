@@ -1,19 +1,18 @@
 import logging
 
-from sumo.wrapper import SumoClient, RetryStrategy
+from ri_cloud_services.services_config import get_services_config
 from ri_cloud_services.utils.httpx_async_client_wrapper import HTTPX_ASYNC_CLIENT_WRAPPER
 
-LOGGER = logging.getLogger(__name__)
+from sumo.wrapper import SumoClient, RetryStrategy
 
-#TODO: Move to config file or something similar?
-SUMO_ENV = "prod" 
+LOGGER = logging.getLogger(__name__)
 
 class _FakeSyncHttpClient:
     """A fake HTTP client to ensure we use async methods instead of sync ones.
     This is needed as we do not want to allow any synchronous HTTP calls in the primary service.
     Ideally this should be handled by the SumoClient. https://github.com/equinor/fmu-sumo/issues/369"""
 
-    def __getattribute__(self, _name: str) -> None:
+    def __getattr__(self, _name: str) -> None:
         # Raise an error on access to this instance. It should not be touched!
         # It should be used merely as a placeholder since we cannot pass None when initializing the SumoClient
         raise RuntimeError("This is a fake sync http client and should not be called!!!")
@@ -22,11 +21,13 @@ class _FakeSyncHttpClient:
 def create_sumo_client(access_token: str) -> SumoClient:
     """Create a SumoClient instance with the given access token."""
 
+    services_config = get_services_config()
+
     if access_token == "DUMMY_TOKEN_FOR_TESTING":  # nosec bandit B105
-        sumo_client = SumoClient(env=SUMO_ENV, interactive=False)
+        sumo_client = SumoClient(env=services_config.sumo_env, interactive=False)
     else:
         sumo_client = SumoClient(
-            env=SUMO_ENV,
+            env=services_config.sumo_env,
             token=access_token,
             retry_strategy=RetryStrategy(stop_after=1),
             http_client=_FakeSyncHttpClient(),

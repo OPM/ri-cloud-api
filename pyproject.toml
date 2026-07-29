@@ -1,7 +1,7 @@
 [project]
 name = "ri-cloud-api"
 authors = [{ name = "Jørgen Herje", email = "jorgen.herje@gmail.com" }]
-requires-python = "^3.11"
+requires-python = ">=3.11"
 version = "0.0.0"
 description = "Local-hosted backend service bridging Sumo data into ResInsight over a FastAPI HTTP API."
 

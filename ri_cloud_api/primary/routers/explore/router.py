@@ -6,9 +6,9 @@ interactions are delegated to ``CaseInventoryAccess`` in the service layer.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Header, Path, Query
+from fastapi import APIRouter, Header, Path, Query
 
-from ri_cloud_services.sumo_access.case_inventory_access import CaseInventoryAccess
+from ri_cloud_services.sumo_access.case_inventory_access import CaseInspector
 
 from ...utils.router_headers import extract_required_token
 
@@ -17,18 +17,15 @@ from .schemas import AssetInfo, CaseInfo, EnsembleInfo
 router = APIRouter(tags=["explore"])
 
 
-def _access() -> CaseInventoryAccess:
-    return CaseInventoryAccess()
-
-
 @router.get("/assets")
 def get_assets(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
 ) -> list[AssetInfo]:
     """List available Sumo assets."""
     access_token = extract_required_token(authorization)
+    case_inspector = CaseInspector()
 
-    return [AssetInfo(name=n) for n in _access().get_asset_names(access_token)]
+    return [AssetInfo(name=n) for n in case_inspector.get_asset_names(access_token)]
 
 
 @router.get("/cases")
@@ -38,7 +35,8 @@ def get_cases(
 ) -> list[CaseInfo]:
     """List Sumo cases for a given asset."""
     access_token = extract_required_token(authorization)
-    cases = _access().get_cases_for_asset(access_token, asset_name)
+    case_inspector = CaseInspector()
+    cases = case_inspector.get_cases_for_asset(access_token, asset_name)
     return [
         CaseInfo(
             id=c.id,
@@ -58,11 +56,11 @@ def get_ensembles(
     case_uuid: str = Path(description="Sumo case uuid"),
 ) -> list[EnsembleInfo]:
     """List ensembles for a case."""
-    try:
-        access_token = extract_required_token(authorization)
-        names = _access().get_ensemble_names(access_token, case_uuid)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    access_token = extract_required_token(authorization)
+    case_inspector = CaseInspector()
+    names = case_inspector.get_ensemble_names(access_token, case_uuid)
+
     return [EnsembleInfo(name=n) for n in names]
 
 
@@ -73,10 +71,8 @@ async def get_ensemble_realizations(
     ensemble_name: str = Path(description="Ensemble name"),
 ) -> list[int]:
     """List realization ids for a case + ensemble."""
-    try:
-        access_token = extract_required_token(authorization)
-        return await _access().get_ensemble_realization_ids_async(
-            access_token, case_uuid, ensemble_name
-        )
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    access_token = extract_required_token(authorization)
+    case_inspector = CaseInspector()
+    return await case_inspector.get_ensemble_realization_ids_async(
+        access_token, case_uuid, ensemble_name
+    )

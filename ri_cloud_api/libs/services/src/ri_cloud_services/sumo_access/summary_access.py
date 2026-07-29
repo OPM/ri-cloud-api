@@ -37,10 +37,6 @@ class SummaryAccess:
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         table_context = case.tables.filter(ensemble=self._ensemble_name, standard_result="simulationtimeseries")
-        # table_context = case.tables.filter(
-        #     ensemble=self._ensemble_name,
-        #     tagname="summary",
-        # )  
 
         if await table_context.length_async() == 0:
             raise NoDataError(
@@ -80,8 +76,6 @@ class SummaryAccess:
 
         blob_name = agg_table.metadata["_sumo"]["blob_name"]
 
-        print(f"DEBUG: Blob name for vector '{vector_name}': {blob_name}")
-
         return blob_name
     
     async def _get_vector_agg_table(self, vector_name: str):
@@ -105,14 +99,16 @@ class SummaryAccess:
             realization=True
         )
 
-        if len(sc_per_real_tables.names) == 0:
+        table_names = await sc_per_real_tables.names_async
+        num_tables = len(table_names)
+        if num_tables == 0:
             raise NoDataError(
                 f"No tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}'",
                 Service.SUMO
             )
-        if len(sc_per_real_tables.names) > 1:
+        if num_tables > 1:
             raise MultipleDataMatchesError(
-                f"Multiple tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}': {sc_per_real_tables.names}",
+                f"Multiple tables found for vector '{vector_name}' in case='{self._case_uuid}', ensemble='{self._ensemble_name}': {table_names}",
                 Service.SUMO
             )
 

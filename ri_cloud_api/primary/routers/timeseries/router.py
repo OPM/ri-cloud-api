@@ -7,7 +7,7 @@ to ``SummaryAccess`` in the service layer.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Header, Path
+from fastapi import APIRouter, Header, Path
 
 from ri_cloud_services.sumo_access.summary_access import SummaryAccess
 
@@ -26,12 +26,9 @@ async def get_vector_list(
 ) -> list[schemas.VectorInfo]:
     """List available summary vector names for the given case + ensemble."""
     access_token = extract_required_token(authorization)
-    
     access = SummaryAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
-    try:
-        names = await access.get_available_vectors_async()
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    names = await access.get_available_vectors_async()
     return [schemas.VectorInfo(name=n) for n in names]
 
 
@@ -44,10 +41,7 @@ async def get_vector_blob_id(
 ) -> str:
     """Get the blob ID for the given summary vector"""
     access_token = extract_required_token(authorization)
-    
     access = SummaryAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
-    try:
-        blob_id = await access.get_vector_blob_id_async(vector_name)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    blob_id = await access.get_vector_blob_id_async(vector_name)
     return blob_id
