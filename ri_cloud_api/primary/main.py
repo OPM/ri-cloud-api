@@ -29,6 +29,7 @@ from .routers.blob_access.router import router as blob_access_router
 from .routers.explore.router import router as explore_router
 from .routers.grids.router import router as grids_router
 from .routers.health.router import router as health_router
+from .routers.parameters.router import router as parameters_router
 from .routers.polygons.router import router as polygons_router
 from .routers.surfaces.router import router as surfaces_router
 from .routers.timeseries.router import router as timeseries_router
@@ -62,10 +63,13 @@ app = FastAPI(
 
 add_exception_handlers(app)
 
-app.include_router(health_router)
 app.include_router(blob_access_router)
 app.include_router(explore_router)
-app.include_router(timeseries_router)
+app.include_router(grids_router)
+app.include_router(health_router)
+app.include_router(parameters_router)
 app.include_router(polygons_router)
 app.include_router(surfaces_router)
-app.include_router(grids_router)
+app.include_router(timeseries_router)
+
+
