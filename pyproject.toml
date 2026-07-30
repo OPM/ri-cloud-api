@@ -24,7 +24,6 @@ sumo-wrapper-python = "^1.7.0"
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.16.0"
 mypy = "^1.18.2"
-pylint = "^4.0.4"
 pytest = "^9.0.3"
 
 [tool.ruff]
@@ -47,13 +46,6 @@ module = [
     "sumo.wrapper.*",
 ]
 follow_untyped_imports = true
-
-[tool.pylint.messages_control]
-disable = [
-    "missing-docstring",
-    "line-too-long",
-    "too-many-positional-arguments",
-]
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
