@@ -31,7 +31,7 @@ class SummaryAccess:
         self._ensemble_name = ensemble_name
 
     @classmethod
-    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "SummaryAccess":
+    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> SummaryAccess:
         return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
 
     async def get_available_vectors_async(self) -> list[str]:

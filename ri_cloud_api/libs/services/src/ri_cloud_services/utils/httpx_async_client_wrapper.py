@@ -1,5 +1,5 @@
-from typing import Optional
 import logging
+from typing import Optional, Self
 
 import httpx
 
@@ -10,9 +10,9 @@ class HTTPXAsyncClientWrapper:
     """Global async client wrapper for HTTPX."""
 
     _instance: Optional["HTTPXAsyncClientWrapper"] = None
-    _async_client: Optional[httpx.AsyncClient] = None
+    _async_client: httpx.AsyncClient | None = None
 
-    def __new__(cls) -> "HTTPXAsyncClientWrapper":
+    def __new__(cls) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance

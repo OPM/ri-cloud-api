@@ -25,7 +25,6 @@ def require_bearer_token(authorization: str | None) -> None:
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
-    return None
 
 
 def extract_bearer_token(authorization: str) -> str:

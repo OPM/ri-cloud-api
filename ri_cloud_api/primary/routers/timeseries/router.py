@@ -8,7 +8,6 @@ to ``SummaryAccess`` in the service layer.
 from __future__ import annotations
 
 from fastapi import APIRouter, Header, Path
-
 from ri_cloud_services.sumo_access.summary_access import SummaryAccess
 
 from ri_cloud_api.primary.utils.router_headers import extract_required_token

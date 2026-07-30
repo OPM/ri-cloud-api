@@ -27,7 +27,7 @@ class ParameterAccess:
         self._ensemble_name = ensemble_name
 
     @classmethod
-    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "ParameterAccess":
+    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> ParameterAccess:
         return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
 
     async def get_parameters_blob_id_async(self) -> str:

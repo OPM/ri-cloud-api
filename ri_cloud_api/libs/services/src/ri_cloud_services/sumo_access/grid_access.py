@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
-from fmu.sumo.explorer.objects import CPGrid
-from fmu.sumo.explorer import TimeFilter, TimeType
 
+from fmu.sumo.explorer import TimeFilter, TimeType
+from fmu.sumo.explorer.objects import CPGrid
 from ri_cloud_core_utils.timestamp_utils import (
     iso_str_to_date_str,
     timestamp_utc_ms_to_iso_str,
 )
+
 from ri_cloud_services.service_exceptions import (
     InvalidDataError,
     InvalidParameterError,
@@ -21,7 +21,7 @@ from ._explorer import get_case_by_uuid
 from .grid_types import GridInfo, GridPropertyInfo
 
 
-def get_time_filter(time_or_interval_str: Optional[str]) -> TimeFilter:
+def get_time_filter(time_or_interval_str: str | None) -> TimeFilter:
     """Convert a time_or_interval_str to a TimeFilter."""
     if time_or_interval_str is None:
         time_filter = TimeFilter(TimeType.NONE)
@@ -59,7 +59,7 @@ class GridAccess:
         self._ensemble_name = ensemble_name
 
     @classmethod
-    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "GridAccess":
+    def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> GridAccess:
         return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
 
     async def get_available_grid_info_list_async(self) -> list[GridInfo]:

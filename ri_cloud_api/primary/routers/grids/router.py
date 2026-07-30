@@ -7,7 +7,6 @@ Exposes endpoints for discovering and (eventually) fetching grid data from Sumo.
 from __future__ import annotations
 
 from fastapi import APIRouter, Header, Path, Query
-
 from ri_cloud_services.sumo_access.grid_access import GridAccess
 
 from ri_cloud_api.primary.utils.router_headers import extract_required_token

@@ -7,11 +7,9 @@ interactions are delegated to ``CaseInventoryAccess`` in the service layer.
 from __future__ import annotations
 
 from fastapi import APIRouter, Header, Path, Query
-
 from ri_cloud_services.sumo_access.case_inventory_access import CaseInspector
 
 from ...utils.router_headers import extract_required_token
-
 from .schemas import AssetInfo, CaseInfo, EnsembleInfo
 
 router = APIRouter(tags=["explore"])

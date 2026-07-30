@@ -1,11 +1,11 @@
 import logging
 
+from sumo.wrapper import RetryStrategy, SumoClient
+
 from ri_cloud_services.services_config import get_services_config
 from ri_cloud_services.utils.httpx_async_client_wrapper import (
     HTTPX_ASYNC_CLIENT_WRAPPER,
 )
-
-from sumo.wrapper import SumoClient, RetryStrategy
 
 LOGGER = logging.getLogger(__name__)
 

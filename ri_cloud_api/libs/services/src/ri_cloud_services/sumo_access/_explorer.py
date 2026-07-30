@@ -11,8 +11,8 @@ import logging
 from fmu.sumo.explorer import Explorer
 from fmu.sumo.explorer.objects import Case
 
-from ri_cloud_services.services_config import get_services_config
 from ri_cloud_services.service_exceptions import NoDataError, Service
+from ri_cloud_services.services_config import get_services_config
 
 logger = logging.getLogger("ri_cloud_api.sumo_access")
 

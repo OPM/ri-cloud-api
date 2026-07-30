@@ -1,6 +1,6 @@
 import httpx
-
 from sumo.wrapper import SumoClient
+
 from ri_cloud_services.service_exceptions import AuthorizationError, Service
 
 

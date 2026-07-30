@@ -8,7 +8,7 @@ def timestamp_utc_ms_to_iso_str(timestamp_utc_ms: int, always_include_millisecon
       YYYY-MM-DDTHH:MM:SS.fffZ
       YYYY-MM-DDTHH:MM:SSZ
     """
-    dt_obj = datetime.datetime.fromtimestamp(timestamp_utc_ms / 1000, tz=datetime.timezone.utc)
+    dt_obj = datetime.datetime.fromtimestamp(timestamp_utc_ms / 1000, tz=datetime.UTC)
 
     # Include milliseconds only if present or forced by flag
     if dt_obj.microsecond != 0 or always_include_milliseconds:

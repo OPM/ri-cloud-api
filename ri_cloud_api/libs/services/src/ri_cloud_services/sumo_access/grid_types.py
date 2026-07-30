@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -19,4 +18,4 @@ class GridPropertyInfo:
     """Information about a grid property, including its name and data type."""
 
     property_name: str
-    iso_date_or_interval: Optional[str] = None
+    iso_date_or_interval: str | None = None

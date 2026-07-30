@@ -16,17 +16,16 @@ Docs:
 from __future__ import annotations
 
 import logging
-
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
+from ri_cloud_services.services_config import ServicesConfig, init_services_config
 from ri_cloud_services.utils.httpx_async_client_wrapper import (
     HTTPX_ASYNC_CLIENT_WRAPPER,
 )
-from ri_cloud_services.services_config import ServicesConfig, init_services_config
 
-from .utils.exception_handlers import add_exception_handlers
+from . import config
 from .routers.blob_access.router import router as blob_access_router
 from .routers.explore.router import router as explore_router
 from .routers.grids.router import router as grids_router
@@ -35,8 +34,7 @@ from .routers.parameters.router import router as parameters_router
 from .routers.polygons.router import router as polygons_router
 from .routers.surfaces.router import router as surfaces_router
 from .routers.timeseries.router import router as timeseries_router
-
-from . import config
+from .utils.exception_handlers import add_exception_handlers
 
 logger = logging.getLogger("ri_cloud_api")
 logging.basicConfig(level=logging.INFO)
