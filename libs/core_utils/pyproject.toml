@@ -1,0 +1,13 @@
+[project]
+name = "ri-cloud-core-utils"
+version = "0.0.0"
+description = "General-purpose utilities with minimal external dependencies, used across ri-cloud-api."
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ri_cloud_core_utils"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
