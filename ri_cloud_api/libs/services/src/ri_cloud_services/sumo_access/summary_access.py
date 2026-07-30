@@ -46,7 +46,7 @@ class SummaryAccess:
 
         if await table_context.length_async() == 0:
             raise NoDataError(
-                f"No summary tables found for ensemble '{self._ensemble_name}' " f"in case '{self._case_uuid}'",
+                f"No summary tables found for ensemble '{self._ensemble_name}' in case '{self._case_uuid}'",
                 Service.SUMO,
             )
 

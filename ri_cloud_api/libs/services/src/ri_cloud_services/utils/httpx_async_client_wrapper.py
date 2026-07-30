@@ -36,13 +36,9 @@ class HTTPXAsyncClientWrapper:
     async def stop_async(self) -> None:
         """Gracefully shutdown. Call from FastAPI shutdown hook."""
         if self._async_client is not None:
-            LOGGER.info(
-                f"httpx async_client.is_closed: {self._async_client.is_closed}. " f"Id: {id(self._async_client)}"
-            )
+            LOGGER.info(f"httpx async_client.is_closed: {self._async_client.is_closed}. Id: {id(self._async_client)}")
             await self._async_client.aclose()
-            LOGGER.info(
-                f"httpx async_client.is_closed: {self._async_client.is_closed}. " f"Id: {id(self._async_client)}"
-            )
+            LOGGER.info(f"httpx async_client.is_closed: {self._async_client.is_closed}. Id: {id(self._async_client)}")
             self._async_client = None
             LOGGER.info("httpx AsyncClient closed")
 

@@ -69,7 +69,7 @@ class GridAccess:
         grid_context = case.grids.grids.filter(ensemble=self._ensemble_name)
         if await grid_context.length_async() == 0:
             raise NoDataError(
-                f"No grid tables found for ensemble '{self._ensemble_name}' " f"in case '{self._case_uuid}'",
+                f"No grid tables found for ensemble '{self._ensemble_name}' in case '{self._case_uuid}'",
                 Service.SUMO,
             )
 
