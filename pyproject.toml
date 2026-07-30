@@ -9,8 +9,7 @@ dependencies = [
     "fastapi>=0.115.0,<0.116.0",
     "uvicorn[standard]>=0.32.0,<0.33.0",
     "pydantic>=2.9.0,<3.0.0",
-    "fmu-sumo>=2.15.0,<3.0.0",
-    "sumo-wrapper-python>=1.7.0,<2.0.0",
+    "ri-cloud-services",
 ]
 
 [dependency-groups]
@@ -20,12 +19,14 @@ dev = [
     "pytest>=9.0.3,<10.0.0",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = [
-    "ri_cloud_api",
-    "ri_cloud_api/libs/services/src/ri_cloud_services",
-    "ri_cloud_api/libs/core_utils/src/ri_cloud_core_utils",
+[tool.uv.workspace]
+members = [
+    "libs/services",
+    "libs/core_utils",
 ]
+
+[tool.uv.sources]
+ri-cloud-services = { workspace = true }
 
 [tool.ruff]
 line-length = 120
@@ -37,8 +38,8 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 explicit_package_bases = true
 mypy_path = [
-    "ri_cloud_api/libs/services/src",
-    "ri_cloud_api/libs/core_utils/src",
+    "libs/services/src",
+    "libs/core_utils/src",
 ]
 
 [[tool.mypy.overrides]]

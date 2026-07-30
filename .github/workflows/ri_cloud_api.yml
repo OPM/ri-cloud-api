@@ -29,4 +29,4 @@ jobs:
         run: uv run ruff format --check --diff .
 
       - name: Type check with mypy
-        run: uv run mypy ri_cloud_api
+        run: uv run mypy ri_cloud_api libs

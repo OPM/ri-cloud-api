@@ -15,8 +15,10 @@ The FastAPI application under `ri_cloud_api/primary/`:
 The Pydantic models defining the request/response contracts live alongside each
 router in `primary/routers/<area>/schemas.py`.
 
-### `ri_cloud_api/libs` — shared libraries
-Reusable packages used across the application, located under `ri_cloud_api/libs/`:
+### `libs` — shared libraries
+Reusable packages used across the application, located under `libs/`. Each is its own
+[uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/) member with its
+own `pyproject.toml`:
 
 * `ri_cloud_services` (`libs/services/src/ri_cloud_services`) — the service layer, responsible for:
     * Accessing data from Sumo via `fmu-sumo` (see `sumo_access/`)

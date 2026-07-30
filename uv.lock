@@ -6,6 +6,13 @@ resolution-markers = [
     "python_full_version < '3.15'",
 ]
 
+[manifest]
+members = [
+    "ri-cloud-api",
+    "ri-cloud-core-utils",
+    "ri-cloud-services",
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.8.0"
@@ -889,9 +896,8 @@ version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
-    { name = "fmu-sumo" },
     { name = "pydantic" },
-    { name = "sumo-wrapper-python" },
+    { name = "ri-cloud-services" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -905,9 +911,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0,<0.116.0" },
-    { name = "fmu-sumo", specifier = ">=2.15.0,<3.0.0" },
     { name = "pydantic", specifier = ">=2.9.0,<3.0.0" },
-    { name = "sumo-wrapper-python", specifier = ">=1.7.0,<2.0.0" },
+    { name = "ri-cloud-services", editable = "libs/services" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0,<0.33.0" },
 ]
 
@@ -916,6 +921,30 @@ dev = [
     { name = "mypy", specifier = ">=1.18.2,<2.0.0" },
     { name = "pytest", specifier = ">=9.0.3,<10.0.0" },
     { name = "ruff", specifier = ">=0.16.0,<0.17.0" },
+]
+
+[[package]]
+name = "ri-cloud-core-utils"
+version = "0.0.0"
+source = { editable = "libs/core_utils" }
+
+[[package]]
+name = "ri-cloud-services"
+version = "0.0.0"
+source = { editable = "libs/services" }
+dependencies = [
+    { name = "fmu-sumo" },
+    { name = "httpx" },
+    { name = "ri-cloud-core-utils" },
+    { name = "sumo-wrapper-python" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fmu-sumo", specifier = ">=2.15.0,<3.0.0" },
+    { name = "httpx", specifier = ">=0.28.0,<1.0.0" },
+    { name = "ri-cloud-core-utils", editable = "libs/core_utils" },
+    { name = "sumo-wrapper-python", specifier = ">=1.7.0,<2.0.0" },
 ]
 
 [[package]]

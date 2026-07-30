@@ -1,0 +1,21 @@
+[project]
+name = "ri-cloud-services"
+version = "0.0.0"
+description = "Service layer for ri-cloud-api: accesses and assembles Sumo data, isolating business logic from the API layer."
+requires-python = ">=3.11"
+dependencies = [
+    "ri-cloud-core-utils",
+    "fmu-sumo>=2.15.0,<3.0.0",
+    "sumo-wrapper-python>=1.7.0,<2.0.0",
+    "httpx>=0.28.0,<1.0.0",
+]
+
+[tool.uv.sources]
+ri-cloud-core-utils = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ri_cloud_services"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
