@@ -31,42 +31,23 @@ Reusable packages used across the application, located under `ri_cloud_api/libs/
 `ri_cloud_api` → `ri_cloud_services` → `ri_cloud_core_utils`
 
 ## Development setup
-Dependencies are managed with [Poetry](https://python-poetry.org/) and defined in
+Dependencies are managed with [uv](https://docs.astral.sh/uv/) and defined in
 `pyproject.toml`. From the repository root:
 
-**Linux:**
 ```bash
-# 1. Install Poetry globally (outside any virtual environment)
-pip install poetry
+# 1. Install uv (see https://docs.astral.sh/uv/getting-started/installation/)
 
-# 2. Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# 3. Install the project and its dependencies into the venv
-poetry install
+# 2. Install the project and its dependencies (creates .venv automatically)
+uv sync
 ```
 
-**Windows (cmd):**
-```cmd
-# 1. Install Poetry globally (outside any virtual environment)
-pip install poetry
-
-# 2. Create and activate a virtual environment
-python -m venv .venv
-.venv\Scripts\activate.bat
-
-# 3. Install the project and its dependencies into the venv
-poetry install
-```
-
-The first `poetry install` generates `poetry.lock`; commit that file.
+The first `uv sync` generates `uv.lock`; commit that file.
 
 ## Running the service
 Start the API with uvicorn from the repository root:
 
 ```cmd
-uvicorn ri_cloud_api.primary.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn ri_cloud_api.primary.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Interactive API documentation is then available at:
