@@ -6,7 +6,9 @@ deal with simple, typed return values.
 
 from __future__ import annotations
 
-from fmu.sumo.explorer.objects import Case, Table
+import asyncio
+
+from fmu.sumo.explorer.objects import SearchContext, Table
 
 from ri_cloud_services.service_exceptions import (
     InvalidDataError,
@@ -97,24 +99,32 @@ class SummaryAccess:
         """
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
-        common_filter = {
-            "ensemble": self._ensemble_name,
-            "standard_result": "simulationtimeseries",  # TODO: Use standard_result type from fmu-data-io?
-        }
+        sc_tables_basis = case.tables.filter(
+            column=vector_name,
+            ensemble=self._ensemble_name,
+            standard_result="simulationtimeseries",  # TODO: Use standard_result type from fmu-data-io?
+        )
 
         # Look for an existing aggregation. Note that this filter must not carry realization=True:
         # an object cannot be both a realization and an aggregation, so such a filter never matches.
         # SearchContext.aggregation_async() probes on the context it is called on, which is why
         # calling it on the per-realization context below always ends up re-triggering aggregation.
-        agg_context = case.tables.filter(column=vector_name, aggregation=_AGGREGATION_OPERATION, **common_filter)
-        if await agg_context.length_async() == 1:
-            agg_table = await agg_context.single_async
-            if isinstance(agg_table, Table) and await self._is_aggregation_current(
-                case, vector_name, agg_table, common_filter
+        sc_existing_agg_tables = sc_tables_basis.filter(aggregation=_AGGREGATION_OPERATION)
+        existing_agg_table_count = await sc_existing_agg_tables.length_async()
+        if existing_agg_table_count > 1:
+            raise MultipleDataMatchesError(
+                f"Multiple existing aggregation tables found for vector '{vector_name}' in "
+                f"case='{self._case_uuid}', ensemble='{self._ensemble_name}'",
+                Service.SUMO,
+            )
+        if existing_agg_table_count == 1:
+            existing_agg_table = await sc_existing_agg_tables.single_async
+            if isinstance(existing_agg_table, Table) and await self._is_agg_valid_for_reals_async(
+                existing_agg_table, sc_tables_basis
             ):
-                return agg_table
+                return existing_agg_table
 
-        sc_per_real_tables = case.tables.filter(column=vector_name, realization=True, **common_filter)
+        sc_per_real_tables = sc_tables_basis.filter(realization=True)
 
         table_names = await sc_per_real_tables.names_async
         num_tables = len(table_names)
@@ -141,7 +151,7 @@ class SummaryAccess:
         return agg_table
 
     @staticmethod
-    async def _is_aggregation_current(case: Case, vector_name: str, agg_table: Table, common_filter: dict) -> bool:
+    async def _is_agg_valid_for_reals_async(agg_table: Table, sc_tables_basis: SearchContext) -> bool:
         """Tell whether an existing aggregation still covers all realizations.
 
         Realizations can be added after an aggregation was made, which leaves the aggregation
@@ -155,13 +165,21 @@ class SummaryAccess:
         except KeyError:
             return False
 
-        per_real_context = case.tables.filter(column=vector_name, realization=True, **common_filter)
+        sc_real_tables = sc_tables_basis.filter(realization=True)
 
-        realization_ids = await per_real_context.filter(
-            complex={"range": {"_sumo.timestamp": {"lt": aggregation_timestamp}}}
-        ).realizationids_async
+        # Neither query depends on the other's result, so run them concurrently rather than
+        # paying for two sequential round-trips on every call.
+        async with asyncio.TaskGroup() as tg:
+            older_ids_task = tg.create_task(
+                sc_real_tables.filter(
+                    complex={"range": {"_sumo.timestamp": {"lt": aggregation_timestamp}}}
+                ).realizationids_async
+            )
+            current_count_task = tg.create_task(sc_real_tables.length_async())
+
+        realization_ids = older_ids_task.result()
 
         if set(realization_ids) != set(recorded_realization_ids):
             return False
 
-        return len(realization_ids) == await per_real_context.length_async()
+        return len(realization_ids) == current_count_task.result()
