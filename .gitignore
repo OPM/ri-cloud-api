@@ -18,3 +18,7 @@ build/
 # IDE
 .vscode/
 .idea/
+
+# Jupyter notebooks (scratch / manual testing)
+*.ipynb
+.ipynb_checkpoints/
