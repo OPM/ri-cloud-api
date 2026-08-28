@@ -6,27 +6,44 @@ Exposes endpoints for discovering and (eventually) fetching grid data from Sumo.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Header, Path, Query
+from fastapi import APIRouter, Header, HTTPException, Path, Query
 from ri_cloud_services.sumo_access.grid_access import GridAccess
 
 from ri_cloud_api.primary.utils.router_headers import extract_required_token
 
-from . import schemas
+from . import converters, schemas
 
 router = APIRouter(tags=["grids"])
 
 
-@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grid_info_list")
-async def get_grid_info_list(
+@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grid_names")
+async def get_grid_names(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
     case_uuid: str = Path(description="Sumo case uuid"),
     ensemble_name: str = Path(description="Ensemble name"),
-) -> list[schemas.GridInfo]:
+) -> list[str]:
+    """List available grid names for the given case + ensemble."""
+    access_token = extract_required_token(authorization)
+    access = GridAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
+    grid_names = await access.get_available_grid_names_async()
+    return grid_names
+
+
+@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grid_info/{grid_name}")
+async def get_grid_info(
+    authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
+    case_uuid: str = Path(description="Sumo case uuid"),
+    ensemble_name: str = Path(description="Ensemble name"),
+    grid_name: str = Path(description="Grid name"),
+) -> list[schemas.GridRealizationInfo]:
     """List available grids, with their realizations, for the given case + ensemble."""
     access_token = extract_required_token(authorization)
     access = GridAccess.from_case_uuid(access_token, case_uuid, ensemble_name)
-    grids = await access.get_available_grid_info_list_async()
-    return [schemas.GridInfo(name=g.name, realizations=g.realizations) for g in grids]
+    grid = await access.get_grid_info_async(grid_name)
+    try:
+        return converters.to_api_grid_info(grid)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"Error converting grid info for grid '{grid_name}': {e}") from e
 
 
 @router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/grids/{grid_name}/realizations/{realization}/blob_id")
