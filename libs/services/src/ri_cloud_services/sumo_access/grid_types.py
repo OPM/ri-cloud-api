@@ -6,11 +6,20 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class GridInfo:
-    """A grid name together with the realizations it is available for."""
+class GridDimensions:
+    """Dimensions of a grid, including the number of cells in each direction."""
 
-    name: str
+    i_count: int
+    j_count: int
+    k_count: int
+
+
+@dataclass(frozen=True)
+class GridInfo:
+    """Realizations of a grid name together with the dimensions of each realization."""
+
     realizations: list[int]
+    dimensions_per_realization: list[GridDimensions]
 
 
 @dataclass(frozen=True)

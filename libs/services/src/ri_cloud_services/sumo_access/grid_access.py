@@ -18,7 +18,7 @@ from ri_cloud_services.service_exceptions import (
 )
 
 from ._explorer import get_case_by_uuid
-from .grid_types import GridInfo, GridPropertyInfo
+from .grid_types import GridDimensions, GridInfo, GridPropertyInfo
 
 
 def get_time_filter(time_or_interval_str: str | None) -> TimeFilter:
@@ -62,11 +62,11 @@ class GridAccess:
     def from_case_uuid(cls, access_token: str, case_uuid: str, ensemble_name: str) -> GridAccess:
         return cls(access_token=access_token, case_uuid=case_uuid, ensemble_name=ensemble_name)
 
-    async def get_available_grid_info_list_async(self) -> list[GridInfo]:
-        """Return the list of available grids with their realizations."""
+    async def get_available_grid_names_async(self) -> list[str]:
+        """Return the list of available grid names."""
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
-        grid_context = case.grids.grids.filter(ensemble=self._ensemble_name)
+        grid_context = case.grids.filter(ensemble=self._ensemble_name)
         if await grid_context.length_async() == 0:
             raise NoDataError(
                 f"No grid tables found for ensemble '{self._ensemble_name}' in case '{self._case_uuid}'",
@@ -74,18 +74,42 @@ class GridAccess:
             )
 
         grid_names = await grid_context.names_async
+        return grid_names
 
-        grid_infos: list[GridInfo] = []
-        for grid_name in grid_names:
-            realization_context = grid_context.filter(name=grid_name, realization=True)
-            realization_ids = await realization_context.realizationids_async
-            grid_infos.append(
-                GridInfo(
-                    name=grid_name,
-                    realizations=sorted(int(r) for r in realization_ids),
-                )
+    async def get_grid_info_async(self, grid_name: str) -> GridInfo:
+        """Return grid info for the given grid name."""
+        case = get_case_by_uuid(self._access_token, self._case_uuid)
+
+        grid_context = case.grids.filter(ensemble=self._ensemble_name, name=grid_name)
+        if await grid_context.length_async() == 0:
+            raise NoDataError(
+                f"No grid tables found for ensemble '{self._ensemble_name}' in case '{self._case_uuid}'",
+                Service.SUMO,
             )
-        return grid_infos
+
+        per_realization_context = grid_context.filter(realization=True)
+
+        realizations: list[int] = []
+        dimensions_per_real: list[GridDimensions] = []
+
+        # Async for loop
+        async for grid_real_object in per_realization_context:
+            if not isinstance(grid_real_object, CPGrid):
+                raise InvalidDataError(f"Expected CPGrid, got {type(grid_real_object)}", Service.SUMO)
+
+            realizations.append(int(grid_real_object.realization))
+            dimensions_per_real.append(self._get_grid_realization_dimensions(grid_real_object))
+
+        return GridInfo(realizations=realizations, dimensions_per_realization=dimensions_per_real)
+
+    @staticmethod
+    def _get_grid_realization_dimensions(real_grid_object: CPGrid) -> GridDimensions:
+        dimensions = GridDimensions(
+            i_count=real_grid_object.metadata["data"]["spec"]["ncol"],
+            j_count=real_grid_object.metadata["data"]["spec"]["nrow"],
+            k_count=real_grid_object.metadata["data"]["spec"]["nlay"],
+        )
+        return dimensions
 
     async def get_grid_blob_id_async(self, grid_name: str, realization: int) -> str:
         """Get the blob ID for the grid data for the given case + ensemble."""
