@@ -5,6 +5,7 @@ description = "Service layer for ri-cloud-api: accesses and assembles Sumo data,
 requires-python = ">=3.11"
 dependencies = [
     "ri-cloud-core-utils",
+    "fmu-datamodels>=0.25.3,<0.26.0",
     "fmu-sumo>=2.15.0,<3.0.0",
     "sumo-wrapper-python>=1.7.0,<2.0.0",
     "httpx>=0.28.0,<1.0.0",
