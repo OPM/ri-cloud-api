@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 from fmu.datamodels.fmu_results.enums import FluidContactType
-from fmu.sumo.explorer.objects import SearchContext
+from fmu.sumo.explorer.objects import Polygons, SearchContext
 from sumo.wrapper import SumoClient
 
-from ri_cloud_services.service_exceptions import MultipleDataMatchesError, Service
+from ri_cloud_services.service_exceptions import MultipleDataMatchesError, NoDataError, Service
 
 from .polygon_types import (
     STD_RES_CONTENT,
-    STD_RES_SUB_NAME_FIELD,
     DepthFaultPolygonMeta,
     FluidContactPolygonMeta,
     PolygonMeta,
     PolygonStandardResult,
 )
 from .sumo_client_factory import create_sumo_client
-
-_NAME_COMPOSITE_SOURCE = {"name": {"terms": {"field": "data.name.keyword"}}}
-_IS_STRATIGRAPHIC_SUB_AGG = {"is_stratigraphic": {"min": {"field": "data.stratigraphic"}}}
 
 
 class PolygonsAccess:
@@ -48,20 +44,20 @@ class PolygonsAccess:
         """
         Get metadata for the `field_outline` standard result polygon in this ensemble.
 
-        There should be exactly one distinct polygon name across all realizations; raises
-        `MultipleDataMatchesError` if more than one is found. Assumes the match is valid for
-        every realization; per-realization existence is not verified here.
+        There should be exactly one distinct polygon name; raises `MultipleDataMatchesError`
+        if more than one is found. Assumes the match is valid for every realization;
+        per-realization existence is not verified here.
         """
-        buckets = await self._get_composite_buckets_async(PolygonStandardResult.FIELD_OUTLINE)
+        documents = await self._get_single_realization_polygons_documents_async(PolygonStandardResult.FIELD_OUTLINE)
 
-        if len(buckets) > 1:
+        if len(documents) > 1:
             raise MultipleDataMatchesError(
                 f"Expected a single field outline polygon name in case='{self._case_uuid}', "
-                f"ensemble='{self._ensemble_name}', got {[bucket['key']['name'] for bucket in buckets]}",
+                f"ensemble='{self._ensemble_name}', got {[document.name for document in documents]}",
                 Service.SUMO,
             )
 
-        return [PolygonMeta(name=bucket["key"]["name"]) for bucket in buckets]
+        return [PolygonMeta(name=document.name) for document in documents]
 
     async def get_structure_depth_fault_lines_polygons_meta_async(self) -> list[DepthFaultPolygonMeta]:
         """
@@ -71,8 +67,10 @@ class PolygonsAccess:
         Assumes each match is valid for every realization; per-realization existence is not
         verified here.
         """
-        buckets = await self._get_composite_buckets_async(PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE)
-        return [_depth_fault_polygon_meta_from_bucket(bucket) for bucket in buckets]
+        documents = await self._get_single_realization_polygons_documents_async(
+            PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE
+        )
+        return [_depth_fault_polygon_meta_from_document(document) for document in documents]
 
     async def get_fluid_contact_outline_polygons_meta_async(self) -> list[FluidContactPolygonMeta]:
         """
@@ -82,32 +80,44 @@ class PolygonsAccess:
         Assumes each match is valid for every realization; per-realization existence is not
         verified here.
         """
-        buckets = await self._get_composite_buckets_async(PolygonStandardResult.FLUID_CONTACT_OUTLINE)
-        return [_fluid_contact_polygon_meta_from_bucket(bucket) for bucket in buckets]
+        documents = await self._get_single_realization_polygons_documents_async(
+            PolygonStandardResult.FLUID_CONTACT_OUTLINE
+        )
+        return [_fluid_contact_polygon_meta_from_document(document) for document in documents]
 
-    async def _get_composite_buckets_async(self, standard_result: PolygonStandardResult) -> list[dict]:
-        search_context = self._ensemble_context.polygons.filter(
-            stage="realization",
-            realization=True,
-            aggregation=False,
+    async def _get_single_realization_polygons_documents_async(
+        self, standard_result: PolygonStandardResult
+    ) -> list[Polygons]:
+        """
+        Fetch the polygon documents for a standard result within a single, arbitrary
+        realization (no aggregation is performed). Since a metadata match is assumed valid for
+        every realization, one realization is enough to discover the full set of distinct
+        polygons for the standard result.
+        """
+        realization_ids = await self._ensemble_context.realizationids_async
+        if not realization_ids:
+            raise NoDataError(
+                f"No realizations found in case='{self._case_uuid}', ensemble='{self._ensemble_name}'",
+                Service.SUMO,
+            )
+
+        polygons_context = self._ensemble_context.polygons.filter(
+            realization=realization_ids[0],
             content=STD_RES_CONTENT[standard_result],
             standard_result=standard_result.value,
         )
 
-        sources = [_NAME_COMPOSITE_SOURCE]
-        sub_name_field = STD_RES_SUB_NAME_FIELD.get(standard_result)
-        if sub_name_field is not None:
-            sources.append({"sub_name": {"terms": {"field": sub_name_field}}})
+        documents: list[Polygons] = []
+        sumo_polygons_object: Polygons
+        async for sumo_polygons_object in polygons_context:
+            documents.append(sumo_polygons_object)
 
-        return await search_context.get_composite_buckets_async(
-            sources=sources,
-            sub_aggs=_IS_STRATIGRAPHIC_SUB_AGG,
-        )
+        return documents
 
 
-def _depth_fault_polygon_meta_from_bucket(bucket: dict) -> DepthFaultPolygonMeta:
-    name = bucket["key"]["name"]
-    is_stratigraphic = bucket["is_stratigraphic"]["value"] == 1
+def _depth_fault_polygon_meta_from_document(document: Polygons) -> DepthFaultPolygonMeta:
+    name = document.name
+    is_stratigraphic = bool(document.stratigraphic)
     return DepthFaultPolygonMeta(
         name=name,
         name_is_stratigraphic_offical=is_stratigraphic,
@@ -115,12 +125,13 @@ def _depth_fault_polygon_meta_from_bucket(bucket: dict) -> DepthFaultPolygonMeta
     )
 
 
-def _fluid_contact_polygon_meta_from_bucket(bucket: dict) -> FluidContactPolygonMeta:
-    name = bucket["key"]["name"]
-    is_stratigraphic = bucket["is_stratigraphic"]["value"] == 1
+def _fluid_contact_polygon_meta_from_document(document: Polygons) -> FluidContactPolygonMeta:
+    name = document.name
+    is_stratigraphic = bool(document.stratigraphic)
+    contact = document.get_property("data.fluid_contact.contact")
     return FluidContactPolygonMeta(
         name=name,
         name_is_stratigraphic_offical=is_stratigraphic,
         stratigraphic_identifier=name if is_stratigraphic else None,
-        contact_type=FluidContactType(bucket["key"]["sub_name"]),
+        contact_type=FluidContactType(contact),
     )
