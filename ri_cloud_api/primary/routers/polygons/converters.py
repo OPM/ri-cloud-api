@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+from fmu.datamodels.fmu_results.enums import FluidContactType
 from ri_cloud_services.sumo_access import polygon_types
 
 from . import schemas
+
+
+def fluid_contact_type_from_api_str(contact_type: str) -> FluidContactType | None:
+    """Convert the API-layer plain-string contact type to a service-layer FluidContactType.
+
+    Returns None if the string does not match a known fluid contact type.
+    """
+    if contact_type in FluidContactType.__members__:
+        return FluidContactType(contact_type)
+    return None
 
 
 def to_api_field_outline_meta(polygon_meta: polygon_types.PolygonMeta) -> schemas.PolygonMeta:
@@ -14,18 +25,34 @@ def to_api_field_outline_meta(polygon_meta: polygon_types.PolygonMeta) -> schema
 def to_api_depth_fault_polygon_meta(polygon_meta: polygon_types.DepthFaultPolygonMeta) -> schemas.DepthFaultPolygonMeta:
     return schemas.DepthFaultPolygonMeta(
         name=polygon_meta.name,
-        name_is_stratigraphic_offical=polygon_meta.name_is_stratigraphic_offical,
-        stratigraphic_identifier=polygon_meta.stratigraphic_identifier,
+        nameIsStratigraphicOffical=polygon_meta.name_is_stratigraphic_offical,
+        stratigraphicIdentifier=polygon_meta.stratigraphic_identifier,
     )
 
 
-def to_api_fluid_contact_polygon_meta(polygon_meta: polygon_types.FluidContactPolygonMeta) -> schemas.FluidContactPolygonMeta:
+def to_api_fluid_contact_polygon_meta(
+    polygon_meta: polygon_types.FluidContactPolygonMeta,
+) -> schemas.FluidContactPolygonMeta:
     return schemas.FluidContactPolygonMeta(
         name=polygon_meta.name,
-        name_is_stratigraphic_offical=polygon_meta.name_is_stratigraphic_offical,
-        stratigraphic_identifier=polygon_meta.stratigraphic_identifier,
-        contact_type=polygon_meta.contact_type,
+        nameIsStratigraphicOffical=polygon_meta.name_is_stratigraphic_offical,
+        stratigraphicIdentifier=polygon_meta.stratigraphic_identifier,
+        contactType=polygon_meta.contact_type.value,
     )
+
+
+def to_api_polygons_data(polygon_data: polygon_types.PolygonData) -> schemas.PolygonData:
+    return schemas.PolygonData(
+        xUtmEArr=polygon_data.x_arr,
+        yUtmNArray=polygon_data.y_arr,
+        zTvdSSArray=polygon_data.z_arr,
+        polyId=polygon_data.poly_id,
+        name=polygon_data.name,
+    )
+
+
+def to_api_polygons_data_list(polygons_data_list: list[polygon_types.PolygonData]) -> list[schemas.PolygonData]:
+    return [to_api_polygons_data(polygons_data) for polygons_data in polygons_data_list]
 
 
 def to_api_polygons_directory(
@@ -42,17 +69,17 @@ def to_api_polygons_directory(
     ] = {}
 
     if field_outline_meta:
-        directory[polygon_types.PolygonStandardResult.FIELD_OUTLINE.value] = [
+        directory[schemas.PolygonResult.FIELD_OUTLINE.value] = [
             to_api_field_outline_meta(meta) for meta in field_outline_meta
         ]
 
     if structure_depth_fault_lines_meta:
-        directory[polygon_types.PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE.value] = [
+        directory[schemas.PolygonResult.STRUCTURE_DEPTH_FAULT_LINE.value] = [
             to_api_depth_fault_polygon_meta(meta) for meta in structure_depth_fault_lines_meta
         ]
 
     if fluid_contact_outline_meta:
-        directory[polygon_types.PolygonStandardResult.FLUID_CONTACT_OUTLINE.value] = [
+        directory[schemas.PolygonResult.FLUID_CONTACT_OUTLINE.value] = [
             to_api_fluid_contact_polygon_meta(meta) for meta in fluid_contact_outline_meta
         ]
 
