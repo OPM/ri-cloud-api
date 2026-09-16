@@ -18,15 +18,8 @@ class PolygonResult(StrEnum):
 class PolygonMeta(BaseModel):
     name: str  # Svarte fm. top / Svarte fm. / Svarte fm. base
 
-
-class DepthFaultPolygonMeta(PolygonMeta):
-    nameIsStratigraphicOffical: bool
-    stratigraphicIdentifier: str | None = None  # Svarte fm.
-
-
-class FluidContactPolygonMeta(DepthFaultPolygonMeta):
+class FluidContactPolygonMeta(PolygonMeta):
     contactType: str  # fwl / owc / goc / gwc
-
 
 class PolygonData(BaseModel):
     xUtmEArr: list[float]

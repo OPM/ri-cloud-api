@@ -24,7 +24,7 @@ async def get_polygon_result_directory(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
     case_uuid: str = Path(description="Sumo case uuid"),
     ensemble_name: str = Path(description="Ensemble name"),
-) -> dict[str, list[schemas.PolygonMeta] | list[schemas.DepthFaultPolygonMeta] | list[schemas.FluidContactPolygonMeta]]:
+) -> dict[str, list[schemas.PolygonMeta] | list[schemas.FluidContactPolygonMeta]]:
     """Get a directory of polygons metadata, categorized per polygon result type."""
     access_token = extract_required_token(authorization)
     access = PolygonsAccess.from_ensemble_name(access_token, case_uuid, ensemble_name)
@@ -41,14 +41,14 @@ async def get_polygon_result_directory(
     )
 
 
-@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/polygon_data")
-async def get_polygon_data(
+@router.get("/cases/{case_uuid}/ensembles/{ensemble_name}/polygons_data")
+async def get_polygons_data(
     authorization: str | None = Header(None, description="Authorization bearer token for Sumo API"),
     case_uuid: str = Path(description="Sumo case uuid"),
     ensemble_name: str = Path(description="Ensemble name"),
     realization: int = Query(description="Realization number"),
     polygon_result: schemas.PolygonResult = Query(description="Polygon result category"),
-    name: str = Query(description="Surface name"),
+    name: str | None = Query(None, description="Polygon name, required unless polygon_result is field_outline"),
     contact_type: str | None = Query(
         None, description="Fluid contact type, required when polygon_result is fluid_contact_outline"
     ),

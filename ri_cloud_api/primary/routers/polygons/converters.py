@@ -18,25 +18,14 @@ def fluid_contact_type_from_api_str(contact_type: str) -> FluidContactType | Non
     return None
 
 
-def to_api_field_outline_meta(polygon_meta: polygon_types.PolygonMeta) -> schemas.PolygonMeta:
+def to_api_polygon_meta(polygon_meta: polygon_types.PolygonMeta) -> schemas.PolygonMeta:
     return schemas.PolygonMeta(name=polygon_meta.name)
-
-
-def to_api_depth_fault_polygon_meta(polygon_meta: polygon_types.DepthFaultPolygonMeta) -> schemas.DepthFaultPolygonMeta:
-    return schemas.DepthFaultPolygonMeta(
-        name=polygon_meta.name,
-        nameIsStratigraphicOffical=polygon_meta.name_is_stratigraphic_offical,
-        stratigraphicIdentifier=polygon_meta.stratigraphic_identifier,
-    )
-
 
 def to_api_fluid_contact_polygon_meta(
     polygon_meta: polygon_types.FluidContactPolygonMeta,
 ) -> schemas.FluidContactPolygonMeta:
     return schemas.FluidContactPolygonMeta(
         name=polygon_meta.name,
-        nameIsStratigraphicOffical=polygon_meta.name_is_stratigraphic_offical,
-        stratigraphicIdentifier=polygon_meta.stratigraphic_identifier,
         contactType=polygon_meta.contact_type.value,
     )
 
@@ -70,12 +59,12 @@ def to_api_polygons_directory(
 
     if field_outline_meta:
         directory[schemas.PolygonResult.FIELD_OUTLINE.value] = [
-            to_api_field_outline_meta(meta) for meta in field_outline_meta
+            to_api_polygon_meta(meta) for meta in field_outline_meta
         ]
 
     if structure_depth_fault_lines_meta:
         directory[schemas.PolygonResult.STRUCTURE_DEPTH_FAULT_LINE.value] = [
-            to_api_depth_fault_polygon_meta(meta) for meta in structure_depth_fault_lines_meta
+            to_api_polygon_meta(meta) for meta in structure_depth_fault_lines_meta
         ]
 
     if fluid_contact_outline_meta:

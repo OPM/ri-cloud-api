@@ -14,15 +14,7 @@ class PolygonMeta:
     name: str  # Svarte fm. top / Svarte fm. / Svarte fm. base
 
 @dataclass(frozen=True, kw_only=True)
-class DepthFaultPolygonMeta(PolygonMeta):
-    name_is_stratigraphic_offical: bool
-    stratigraphic_identifier: str | None = None  # Svarte fm.
-    # Note: relative_stratigraphic_level and parent_stratigraphic_identifier are intentionally
-    # omitted here. They require correlating against an SMDA stratigraphic column, which this
-    # service does not yet have access to.
-
-@dataclass(frozen=True, kw_only=True)
-class FluidContactPolygonMeta(DepthFaultPolygonMeta):
+class FluidContactPolygonMeta(PolygonMeta):
     contact_type: FluidContactType
 
 @dataclass(frozen=True)

@@ -10,13 +10,15 @@ from ri_cloud_services.service_exceptions import InvalidDataError, MultipleDataM
 from .polygon_types import (
     STD_RES_CONTENT,
     STD_RES_SUB_NAME_FIELD,
-    DepthFaultPolygonMeta,
     FluidContactPolygonMeta,
     PolygonData,
     PolygonMeta,
     PolygonStandardResult,
 )
 from .sumo_client_factory import create_sumo_client
+
+_NAME_COMPOSITE_SOURCE = {"name": {"terms": {"field": "data.name.keyword"}}}
+_IS_STRATIGRAPHIC_SUB_AGG = {"is_stratigraphic": {"min": {"field": "data.stratigraphic"}}}
 
 
 class PolygonsAccess:
@@ -47,22 +49,22 @@ class PolygonsAccess:
         """
         Get metadata for the `field_outline` standard result polygon in this ensemble.
 
-        There should be exactly one distinct polygon name; raises `MultipleDataMatchesError`
-        if more than one is found. Assumes the match is valid for every realization;
-        per-realization existence is not verified here.
+        There should be exactly one distinct polygon name across all realizations; raises
+        `MultipleDataMatchesError` if more than one is found. Assumes the match is valid for
+        every realization; per-realization existence is not verified here.
         """
-        documents = await self._get_single_realization_polygons_documents_async(PolygonStandardResult.FIELD_OUTLINE)
+        buckets = await self._get_composite_buckets_async(PolygonStandardResult.FIELD_OUTLINE)
 
-        if len(documents) > 1:
+        if len(buckets) > 1:
             raise MultipleDataMatchesError(
                 f"Expected a single field outline polygon name in case='{self._case_uuid}', "
-                f"ensemble='{self._ensemble_name}', got {[document.name for document in documents]}",
+                f"ensemble='{self._ensemble_name}', got {[bucket['key']['name'] for bucket in buckets]}",
                 Service.SUMO,
             )
 
-        return [PolygonMeta(name=document.name) for document in documents]
+        return [_polygon_meta_from_bucket(bucket) for bucket in buckets]
 
-    async def get_structure_depth_fault_lines_polygons_meta_async(self) -> list[DepthFaultPolygonMeta]:
+    async def get_structure_depth_fault_lines_polygons_meta_async(self) -> list[PolygonMeta]:
         """
         Get metadata for the `structure_depth_fault_lines` standard result polygons in this
         ensemble, unique per polygon name.
@@ -70,10 +72,8 @@ class PolygonsAccess:
         Assumes each match is valid for every realization; per-realization existence is not
         verified here.
         """
-        documents = await self._get_single_realization_polygons_documents_async(
-            PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE
-        )
-        return [_depth_fault_polygon_meta_from_document(document) for document in documents]
+        buckets = await self._get_composite_buckets_async(PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE)
+        return [_polygon_meta_from_bucket(bucket) for bucket in buckets]
 
     async def get_fluid_contact_outline_polygons_meta_async(self) -> list[FluidContactPolygonMeta]:
         """
@@ -83,10 +83,8 @@ class PolygonsAccess:
         Assumes each match is valid for every realization; per-realization existence is not
         verified here.
         """
-        documents = await self._get_single_realization_polygons_documents_async(
-            PolygonStandardResult.FLUID_CONTACT_OUTLINE
-        )
-        return [_fluid_contact_polygon_meta_from_document(document) for document in documents]
+        buckets = await self._get_composite_buckets_async(PolygonStandardResult.FLUID_CONTACT_OUTLINE)
+        return [_fluid_contact_polygon_meta_from_bucket(bucket) for bucket in buckets]
 
     async def get_field_outline_polygon_data_async(self, realization: int) -> list[PolygonData]:
         """
@@ -97,7 +95,7 @@ class PolygonsAccess:
         document = await self._get_single_polygon_document_async(
             PolygonStandardResult.FIELD_OUTLINE, realization=realization
         )
-        return _polygon_data_list_from_document(await _read_polygon_table_async(document))
+        return _polygon_data_list_from_polars_df(await _read_polygon_document_as_df_async(document))
 
     async def get_structure_depth_fault_lines_polygon_data_async(
         self, realization: int, name: str
@@ -106,7 +104,7 @@ class PolygonsAccess:
         document = await self._get_single_polygon_document_async(
             PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE, realization=realization, name=name
         )
-        return _polygon_data_list_from_document(await _read_polygon_table_async(document))
+        return _polygon_data_list_from_polars_df(await _read_polygon_document_as_df_async(document))
 
     async def get_fluid_contact_outline_polygon_data_async(
         self, realization: int, name: str, contact_type: FluidContactType
@@ -119,7 +117,7 @@ class PolygonsAccess:
             name=name,
             complex_filter={"term": {contact_field: contact_type.value}},
         )
-        return _polygon_data_list_from_document(await _read_polygon_table_async(document))
+        return _polygon_data_list_from_polars_df(await _read_polygon_document_as_df_async(document))
 
     async def _get_single_polygon_document_async(
         self,
@@ -162,55 +160,44 @@ class PolygonsAccess:
 
         return await polygons_context.getitem_async(0)
 
-    async def _get_single_realization_polygons_documents_async(
-        self, standard_result: PolygonStandardResult
-    ) -> list[Polygons]:
+    async def _get_composite_buckets_async(self, standard_result: PolygonStandardResult) -> list[dict]:
         """
-        Fetch the polygon documents for a standard result within a single, arbitrary
-        realization (no aggregation is performed). Since a metadata match is assumed valid for
-        every realization, one realization is enough to discover the full set of distinct
-        polygons for the standard result.
+        Aggregate the distinct polygons for a standard result across all realizations, using a
+        composite terms aggregation on polygon name (+ contact sub-name for fluid contacts).
+        Since a metadata match is assumed valid for every realization, this yields the full set
+        of distinct polygons for the standard result without needing to iterate documents.
         """
-        realization_ids = await self._ensemble_context.realizationids_async
-        if not realization_ids:
-            raise NoDataError(
-                f"No realizations found in case='{self._case_uuid}', ensemble='{self._ensemble_name}'",
-                Service.SUMO,
-            )
-
-        polygons_context = self._ensemble_context.polygons.filter(
-            realization=realization_ids[0],
+        search_context = self._ensemble_context.polygons.filter(
+            stage="realization",
+            realization=True,
+            aggregation=False,
             content=STD_RES_CONTENT[standard_result],
             standard_result=standard_result.value,
         )
 
-        documents: list[Polygons] = []
-        sumo_polygons_object: Polygons
-        async for sumo_polygons_object in polygons_context:
-            documents.append(sumo_polygons_object)
+        sources = [_NAME_COMPOSITE_SOURCE]
+        sub_name_field = STD_RES_SUB_NAME_FIELD.get(standard_result)
+        if sub_name_field is not None:
+            sources.append({"sub_name": {"terms": {"field": sub_name_field}}})
 
-        return documents
+        return await search_context.get_composite_buckets_async(
+            sources=sources,
+            sub_aggs=_IS_STRATIGRAPHIC_SUB_AGG,
+        )
 
 
-def _depth_fault_polygon_meta_from_document(document: Polygons) -> DepthFaultPolygonMeta:
-    name = document.name
-    is_stratigraphic = bool(document.stratigraphic)
-    return DepthFaultPolygonMeta(
+def _polygon_meta_from_bucket(bucket: dict) -> PolygonMeta:
+    name = bucket["key"]["name"]
+    return PolygonMeta(
         name=name,
-        name_is_stratigraphic_offical=is_stratigraphic,
-        stratigraphic_identifier=name if is_stratigraphic else None,
     )
 
 
-def _fluid_contact_polygon_meta_from_document(document: Polygons) -> FluidContactPolygonMeta:
-    name = document.name
-    is_stratigraphic = bool(document.stratigraphic)
-    contact = document.get_property("data.fluid_contact.contact")
+def _fluid_contact_polygon_meta_from_bucket(bucket: dict) -> FluidContactPolygonMeta:
+    name = bucket["key"]["name"]
     return FluidContactPolygonMeta(
         name=name,
-        name_is_stratigraphic_offical=is_stratigraphic,
-        stratigraphic_identifier=name if is_stratigraphic else None,
-        contact_type=FluidContactType(contact),
+        contact_type=FluidContactType(bucket["key"]["sub_name"]),
     )
 
 
@@ -219,10 +206,10 @@ _LEGACY_XYZ_ID_COLUMNS = ("X", "Y", "Z", "ID")
 _LEGACY_TO_XYZ_ID_COLUMN_RENAME = dict(zip(_LEGACY_XYZ_ID_COLUMNS, _XYZ_ID_COLUMNS))
 
 
-async def _read_polygon_table_async(document: Polygons) -> pl.DataFrame:
+async def _read_polygon_document_as_df_async(document: Polygons) -> pl.DataFrame:
     """
-    Read a polygon document's raw column data directly as a `polars.DataFrame`, without going
-    through pandas (we only need to read/group columns, not process them). `polars` reads CSV
+    Read a polygon document's raw column data directly as a `polars.DataFrame`,
+    (we only need to read/group columns, not process them). `polars` reads CSV
     and parquet natively, so no `pyarrow` dependency is required.
     """
     blob = await document.blob_async
@@ -234,27 +221,27 @@ async def _read_polygon_table_async(document: Polygons) -> pl.DataFrame:
     raise InvalidDataError(f"Unknown polygons format '{document.format}'", Service.SUMO)
 
 
-def _polygon_data_list_from_document(table: pl.DataFrame) -> list[PolygonData]:
+def _polygon_data_list_from_polars_df(df: pl.DataFrame) -> list[PolygonData]:
     """
-    Convert a polygons table (as read by `_read_polygon_table_async`) into one `PolygonData`
+    Convert a polygons df (as read by `_read_polygon_document_as_df_async`) into one `PolygonData`
     per `POLY_ID` group. A single named polygon set can contain multiple geometrically
     distinct polygons (e.g. fault networks).
     """
-    if not all(column in table.columns for column in _XYZ_ID_COLUMNS):
-        if all(column in table.columns for column in _LEGACY_XYZ_ID_COLUMNS):
-            table = table.rename(_LEGACY_TO_XYZ_ID_COLUMN_RENAME)
+    if not all(column in df.columns for column in _XYZ_ID_COLUMNS):
+        if all(column in df.columns for column in _LEGACY_XYZ_ID_COLUMNS):
+            df = df.rename(_LEGACY_TO_XYZ_ID_COLUMN_RENAME)
         else:
             raise InvalidDataError(
-                f"Invalid polygons data, expected columns {_XYZ_ID_COLUMNS}, got {table.columns}",
+                f"Invalid polygons data, expected columns {_XYZ_ID_COLUMNS}, got {df.columns}",
                 Service.SUMO,
             )
 
-    has_name = "NAME" in table.columns
-    poly_ids = table.get_column("POLY_ID").to_list()
-    x_arr = table.get_column("X_UTME").to_list()
-    y_arr = table.get_column("Y_UTMN").to_list()
-    z_arr = table.get_column("Z_TVDSS").to_list()
-    names = table.get_column("NAME").to_list() if has_name else None
+    has_name = "NAME" in df.columns
+    poly_ids = df.get_column("POLY_ID").to_list()
+    x_arr = df.get_column("X_UTME").to_list()
+    y_arr = df.get_column("Y_UTMN").to_list()
+    z_arr = df.get_column("Z_TVDSS").to_list()
+    names = df.get_column("NAME").to_list() if has_name else None
 
     row_indices_by_poly_id: dict[int | str, list[int]] = {}
     for row_index, poly_id in enumerate(poly_ids):
