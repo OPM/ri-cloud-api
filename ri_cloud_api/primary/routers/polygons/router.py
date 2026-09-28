@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import APIRouter, Header, HTTPException, Path, Query
+from ri_cloud_services.service_exceptions import NoDataError
 from ri_cloud_services.sumo_access.polygon_access import PolygonsAccess
 
 from ri_cloud_api.primary.utils.router_headers import extract_required_token
@@ -63,29 +64,34 @@ async def get_polygons_data(
         raise HTTPException(status_code=400, detail="Name must be specified for structure depth fault line polygons.")
     if polygon_result == schemas.PolygonResult.FLUID_CONTACT_OUTLINE and name is None:
         raise HTTPException(status_code=400, detail="Name must be specified for fluid contact outline polygons.")
+    if polygon_result == schemas.PolygonResult.FLUID_CONTACT_OUTLINE and contact_type is None:
+        raise HTTPException(
+            status_code=400, detail="Contact type must be specified for fluid contact outline polygons."
+        )
 
     fluid_contact_type = None
-    if polygon_result == schemas.PolygonResult.FLUID_CONTACT_OUTLINE:
-        if contact_type is None:
-            raise HTTPException(
-                status_code=400, detail="Contact type must be specified for fluid contact outline polygons."
-            )
+    if polygon_result == schemas.PolygonResult.FLUID_CONTACT_OUTLINE and contact_type is not None:
         fluid_contact_type = converters.fluid_contact_type_from_api_str(contact_type)
         if fluid_contact_type is None:
-            raise HTTPException(status_code=400, detail=f"Unknown contact type: {contact_type}")
+            raise HTTPException(status_code=400, detail=f"Unknown contact type requested: {contact_type}")
 
     access_token = extract_required_token(authorization)
     access = PolygonsAccess.from_ensemble_name(access_token, case_uuid, ensemble_name)
 
-    if polygon_result == schemas.PolygonResult.FIELD_OUTLINE:
-        polygon_data = await access.get_field_outline_polygon_data_async(realization)
-        return converters.to_api_polygons_data_list(polygon_data)
-    if polygon_result == schemas.PolygonResult.STRUCTURE_DEPTH_FAULT_LINE:
-        assert name is not None
-        polygon_data = await access.get_structure_depth_fault_lines_polygon_data_async(realization, name)
-        return converters.to_api_polygons_data_list(polygon_data)
+    try:
+        if polygon_result == schemas.PolygonResult.FIELD_OUTLINE:
+            polygon_data = await access.get_field_outline_polygon_data_async(realization)
+        elif polygon_result == schemas.PolygonResult.STRUCTURE_DEPTH_FAULT_LINE:
+            assert name is not None
+            polygon_data = await access.get_structure_depth_fault_lines_polygon_data_async(realization, name)
+        else:
+            assert name is not None
+            assert fluid_contact_type is not None
+            polygon_data = await access.get_fluid_contact_outline_polygon_data_async(
+                realization, name, fluid_contact_type
+            )
+    except NoDataError:
+        # No match is a valid outcome here - return an empty list.
+        polygon_data = []
 
-    assert name is not None
-    assert fluid_contact_type is not None
-    polygon_data = await access.get_fluid_contact_outline_polygon_data_async(realization, name, fluid_contact_type)
     return converters.to_api_polygons_data_list(polygon_data)
