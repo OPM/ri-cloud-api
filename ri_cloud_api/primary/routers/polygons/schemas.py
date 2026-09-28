@@ -26,4 +26,4 @@ class PolygonData(BaseModel):
     yUtmNArray: list[float]
     zTvdSSArray: list[float]
     polyId: int | str
-    name: str
+    name: str | None

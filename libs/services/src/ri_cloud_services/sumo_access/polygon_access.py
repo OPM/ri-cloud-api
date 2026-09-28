@@ -41,7 +41,7 @@ class PolygonsAccess:
         )
 
     @classmethod
-    def from_ensemble_name(cls, access_token: str, case_uuid: str, ensemble_name: str) -> "PolygonsAccess":
+    def from_ensemble_name(cls, access_token: str, case_uuid: str, ensemble_name: str) -> PolygonsAccess:
         sumo_client = create_sumo_client(access_token)
         return cls(sumo_client=sumo_client, case_uuid=case_uuid, ensemble_name=ensemble_name)
 
@@ -249,7 +249,7 @@ def _polygon_data_list_from_polars_df(df: pl.DataFrame) -> list[PolygonData]:
 
     polygon_data_list: list[PolygonData] = []
     for poly_id, row_indices in row_indices_by_poly_id.items():
-        name = names[row_indices[0]] if names is not None else "NO_NAME_IN_METADATA"
+        name = names[row_indices[0]] if names is not None else None
         poly_id_value = poly_id if isinstance(poly_id, (int, str)) else str(poly_id)
         polygon_data_list.append(
             PolygonData(

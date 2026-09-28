@@ -1,8 +1,9 @@
-from enum import StrEnum
 from dataclasses import dataclass
+from enum import StrEnum
 
 from fmu.datamodels.fmu_results.enums import Content, FluidContactType
 from fmu.datamodels.standard_results.enums import StandardResultName
+
 
 class PolygonStandardResult(StrEnum):
     FIELD_OUTLINE = StandardResultName.field_outline.value
@@ -23,7 +24,7 @@ class PolygonData:
     y_arr: list[float]
     z_arr: list[float]
     poly_id: int | str
-    name: str
+    name: str | None
 
 # Sumo field holding the value that a sub_name is matched against, per standard result.
 # Standard results without an entry here do not support a sub_name.

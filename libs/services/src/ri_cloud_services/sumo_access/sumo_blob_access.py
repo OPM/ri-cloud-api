@@ -1,8 +1,8 @@
 import httpx
+from sumo.wrapper import SumoClient
 
 from ri_cloud_services.service_exceptions import AuthorizationError, Service
 
-from sumo.wrapper import SumoClient
 
 async def get_sas_token_and_blob_base_uri_for_object_id_async(
     sumo_client: SumoClient, object_id: str
