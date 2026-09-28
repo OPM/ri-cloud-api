@@ -10,13 +10,16 @@ class PolygonStandardResult(StrEnum):
     FLUID_CONTACT_OUTLINE = StandardResultName.fluid_contact_outline.value
     STRUCTURE_DEPTH_FAULT_LINE = StandardResultName.structure_depth_fault_lines.value
 
+
 @dataclass(frozen=True, kw_only=True)
 class PolygonMeta:
     name: str  # Svarte fm. top / Svarte fm. / Svarte fm. base
 
+
 @dataclass(frozen=True, kw_only=True)
 class FluidContactPolygonMeta(PolygonMeta):
     contact_type: FluidContactType
+
 
 @dataclass(frozen=True)
 class PolygonData:
@@ -25,6 +28,7 @@ class PolygonData:
     z_arr: list[float]
     poly_id: int | str
     name: str | None
+
 
 # Sumo field holding the value that a sub_name is matched against, per standard result.
 # Standard results without an entry here do not support a sub_name.

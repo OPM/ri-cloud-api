@@ -18,8 +18,10 @@ class PolygonResult(StrEnum):
 class PolygonMeta(BaseModel):
     name: str  # Svarte fm. top / Svarte fm. / Svarte fm. base
 
+
 class FluidContactPolygonMeta(PolygonMeta):
     contactType: str  # fwl / owc / goc / gwc
+
 
 class PolygonData(BaseModel):
     xUtmEArr: list[float]

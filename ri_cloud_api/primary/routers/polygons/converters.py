@@ -21,6 +21,7 @@ def fluid_contact_type_from_api_str(contact_type: str) -> FluidContactType | Non
 def to_api_polygon_meta(polygon_meta: polygon_types.PolygonMeta) -> schemas.PolygonMeta:
     return schemas.PolygonMeta(name=polygon_meta.name)
 
+
 def to_api_fluid_contact_polygon_meta(
     polygon_meta: polygon_types.FluidContactPolygonMeta,
 ) -> schemas.FluidContactPolygonMeta:
