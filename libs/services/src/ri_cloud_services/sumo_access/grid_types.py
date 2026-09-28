@@ -28,5 +28,4 @@ class GridPropertyInfo:
 
     property_name: str
     iso_date_or_interval: str | None = None
-
-
+    
