@@ -47,16 +47,14 @@ def to_api_polygons_data_list(polygons_data_list: list[polygon_types.PolygonData
 
 def to_api_polygons_directory(
     field_outline_meta: list[polygon_types.PolygonMeta],
-    structure_depth_fault_lines_meta: list[polygon_types.DepthFaultPolygonMeta],
+    structure_depth_fault_lines_meta: list[polygon_types.PolygonMeta],
     fluid_contact_outline_meta: list[polygon_types.FluidContactPolygonMeta],
-) -> dict[str, list[schemas.PolygonMeta] | list[schemas.DepthFaultPolygonMeta] | list[schemas.FluidContactPolygonMeta]]:
+) -> dict[str, list[schemas.PolygonMeta] | list[schemas.FluidContactPolygonMeta]]:
     """Assemble the per-standard-result metadata lists into the API directory response.
 
     A standard result with no matches is omitted from the returned dict.
     """
-    directory: dict[
-        str, list[schemas.PolygonMeta] | list[schemas.DepthFaultPolygonMeta] | list[schemas.FluidContactPolygonMeta]
-    ] = {}
+    directory: dict[str, list[schemas.PolygonMeta] | list[schemas.FluidContactPolygonMeta]] = {}
 
     if field_outline_meta:
         directory[schemas.PolygonResult.FIELD_OUTLINE.value] = [
