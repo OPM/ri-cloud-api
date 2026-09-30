@@ -30,15 +30,16 @@ async def get_polygon_result_directory(
     access_token = extract_required_token(authorization)
     access = PolygonsAccess.from_ensemble_name(access_token, case_uuid, ensemble_name)
 
-    async with asyncio.TaskGroup() as tg:
-        field_outline_task = tg.create_task(access.get_field_outline_polygons_meta_async())
-        structure_depth_fault_lines_task = tg.create_task(access.get_structure_depth_fault_lines_polygons_meta_async())
-        fluid_contact_outline_task = tg.create_task(access.get_fluid_contact_outline_polygons_meta_async())
+    field_outline, structure_depth_fault_lines, fluid_contact_outline = await asyncio.gather(
+        access.get_field_outline_polygons_meta_async(),
+        access.get_structure_depth_fault_lines_polygons_meta_async(),
+        access.get_fluid_contact_outline_polygons_meta_async(),
+    )
 
     return converters.to_api_polygons_directory(
-        field_outline_task.result(),
-        structure_depth_fault_lines_task.result(),
-        fluid_contact_outline_task.result(),
+        field_outline,
+        structure_depth_fault_lines,
+        fluid_contact_outline,
     )
 
 
