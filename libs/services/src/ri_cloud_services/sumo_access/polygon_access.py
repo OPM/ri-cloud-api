@@ -9,6 +9,7 @@ from ri_cloud_services.service_exceptions import InvalidDataError, MultipleDataM
 
 from .polygon_types import (
     STD_RES_CONTENT,
+    STD_RES_INDEX_COLUMNS,
     STD_RES_SUB_NAME_FIELD,
     FluidContactPolygonMeta,
     PolygonData,
@@ -19,6 +20,12 @@ from .sumo_client_factory import create_sumo_client
 
 _NAME_COMPOSITE_SOURCE = {"name": {"terms": {"field": "data.name.keyword"}}}
 _IS_STRATIGRAPHIC_SUB_AGG = {"is_stratigraphic": {"min": {"field": "data.stratigraphic"}}}
+
+# The base geometry columns this module reads unconditionally (hardcoded, independent of
+# `STD_RES_INDEX_COLUMNS`/`fmu.datamodels`). Checked separately from `STD_RES_INDEX_COLUMNS` below
+# since the two can drift apart for different reasons: this one only changes if we change what
+# columns we read here, the other changes if `fmu.datamodels.standard_results` changes.
+_REQUIRED_POLYGONS_TABLE_IDX_COLUMNS = ("X_UTME", "Y_UTMN", "Z_TVDSS", "POLY_ID")
 
 
 class PolygonsAccess:
@@ -95,7 +102,11 @@ class PolygonsAccess:
         document = await self._get_single_polygon_document_async(
             PolygonStandardResult.FIELD_OUTLINE, realization=realization
         )
-        return _polygon_data_list_from_polars_df(await _read_polygon_document_as_df_async(document))
+
+        polygon_df = await _read_polygon_document_as_df_async(document)
+        _validate_polygons_df_std_res_index_columns(polygon_df, PolygonStandardResult.FIELD_OUTLINE)
+
+        return _polygon_data_list_from_polars_df(polygon_df)
 
     async def get_structure_depth_fault_lines_polygon_data_async(
         self, realization: int, name: str
@@ -104,7 +115,11 @@ class PolygonsAccess:
         document = await self._get_single_polygon_document_async(
             PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE, realization=realization, name=name
         )
-        return _polygon_data_list_from_polars_df(await _read_polygon_document_as_df_async(document))
+
+        polygon_df = await _read_polygon_document_as_df_async(document)
+        _validate_polygons_df_std_res_index_columns(polygon_df, PolygonStandardResult.STRUCTURE_DEPTH_FAULT_LINE)
+
+        return _polygon_data_list_from_polars_df(polygon_df)
 
     async def get_fluid_contact_outline_polygon_data_async(
         self, realization: int, name: str, contact_type: FluidContactType
@@ -117,7 +132,11 @@ class PolygonsAccess:
             name=name,
             complex_filter={"term": {contact_field: contact_type.value}},
         )
-        return _polygon_data_list_from_polars_df(await _read_polygon_document_as_df_async(document))
+
+        polygon_df = await _read_polygon_document_as_df_async(document)
+        _validate_polygons_df_std_res_index_columns(polygon_df, PolygonStandardResult.FLUID_CONTACT_OUTLINE)
+
+        return _polygon_data_list_from_polars_df(polygon_df)
 
     async def _get_single_polygon_document_async(
         self,
@@ -201,11 +220,6 @@ def _fluid_contact_polygon_meta_from_bucket(bucket: dict) -> FluidContactPolygon
     )
 
 
-_XYZ_ID_COLUMNS = ("X_UTME", "Y_UTMN", "Z_TVDSS", "POLY_ID")
-_LEGACY_XYZ_ID_COLUMNS = ("X", "Y", "Z", "ID")
-_LEGACY_TO_XYZ_ID_COLUMN_RENAME = dict(zip(_LEGACY_XYZ_ID_COLUMNS, _XYZ_ID_COLUMNS))
-
-
 async def _read_polygon_document_as_df_async(document: Polygons) -> pl.DataFrame:
     """
     Read a polygon document's raw column data directly as a `polars.DataFrame`,
@@ -221,20 +235,33 @@ async def _read_polygon_document_as_df_async(document: Polygons) -> pl.DataFrame
     raise InvalidDataError(f"Unknown polygons format '{document.format}'", Service.SUMO)
 
 
+def _validate_polygons_df_std_res_index_columns(df: pl.DataFrame, standard_result: PolygonStandardResult) -> None:
+    """
+    Validates that the given polygons DataFrame contains all required index columns for the specified 
+    standard result.
+    """
+    index_columns = STD_RES_INDEX_COLUMNS[standard_result]
+    missing_columns = set(index_columns) - set(df.columns)
+    if missing_columns:
+        raise InvalidDataError(
+            f"Polygons data for '{standard_result.value}' is missing required column(s) "
+            f"{sorted(missing_columns)}, got {df.columns}",
+            Service.SUMO,
+        )
+
+
 def _polygon_data_list_from_polars_df(df: pl.DataFrame) -> list[PolygonData]:
     """
     Convert a polygons df (as read by `_read_polygon_document_as_df_async`) into one `PolygonData`
     per `POLY_ID` group. A single named polygon set can contain multiple geometrically
     distinct polygons (e.g. fault networks).
     """
-    if not all(column in df.columns for column in _XYZ_ID_COLUMNS):
-        if all(column in df.columns for column in _LEGACY_XYZ_ID_COLUMNS):
-            df = df.rename(_LEGACY_TO_XYZ_ID_COLUMN_RENAME)
-        else:
-            raise InvalidDataError(
-                f"Invalid polygons data, expected columns {_XYZ_ID_COLUMNS}, got {df.columns}",
-                Service.SUMO,
-            )
+    missing_required_columns = set(_REQUIRED_POLYGONS_TABLE_IDX_COLUMNS) - set(df.columns)
+    if missing_required_columns:
+        raise InvalidDataError(
+            f"Polygons data for is missing required column(s): {sorted(missing_required_columns)}, got {df.columns}",
+            Service.SUMO,
+        )
 
     has_name = "NAME" in df.columns
     poly_ids = df.get_column("POLY_ID").to_list()
