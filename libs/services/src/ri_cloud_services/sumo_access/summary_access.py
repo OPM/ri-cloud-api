@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 
+from fmu.datamodels.standard_results.enums import StandardResultName
 from fmu.sumo.explorer.objects import SearchContext, Table
 
 from ri_cloud_services.service_exceptions import (
@@ -48,7 +49,9 @@ class SummaryAccess:
         """
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
-        table_context = case.tables.filter(ensemble=self._ensemble_name, standard_result="simulationtimeseries")
+        table_context = case.tables.filter(
+            ensemble=self._ensemble_name, standard_result=StandardResultName.simulationtimeseries
+        )
 
         if await table_context.length_async() == 0:
             raise NoDataError(
@@ -100,9 +103,7 @@ class SummaryAccess:
         case = get_case_by_uuid(self._access_token, self._case_uuid)
 
         sc_tables_basis = case.tables.filter(
-            column=vector_name,
-            ensemble=self._ensemble_name,
-            standard_result="simulationtimeseries",  # TODO: Use standard_result type from fmu-data-io?
+            column=vector_name, ensemble=self._ensemble_name, standard_result=StandardResultName.simulationtimeseries
         )
 
         # Look for an existing aggregation. Note that this filter must not carry realization=True:

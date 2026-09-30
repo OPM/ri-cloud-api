@@ -31,6 +31,11 @@ ri-cloud-services = { workspace = true }
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection style relies on calling Query/Path/Header/Depends/Body as
+# parameter defaults; these are not mutable-default bugs and should not be flagged by B008.
+extend-immutable-calls = ["fastapi.Query", "fastapi.Path", "fastapi.Header", "fastapi.Depends", "fastapi.Body"]
+
 
 [tool.mypy]
 python_version = "3.13"
