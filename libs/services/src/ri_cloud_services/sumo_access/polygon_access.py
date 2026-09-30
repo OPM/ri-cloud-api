@@ -237,7 +237,7 @@ async def _read_polygon_document_as_df_async(document: Polygons) -> pl.DataFrame
 
 def _validate_polygons_df_std_res_index_columns(df: pl.DataFrame, standard_result: PolygonStandardResult) -> None:
     """
-    Validates that the given polygons DataFrame contains all required index columns for the specified 
+    Validates that the given polygons DataFrame contains all required index columns for the specified
     standard result.
     """
     index_columns = STD_RES_INDEX_COLUMNS[standard_result]
